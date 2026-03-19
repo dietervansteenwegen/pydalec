@@ -1,0 +1,92 @@
+---
+# exclude:
+fail_fast: false
+minimum_pre_commit_version: 3.0.0
+
+repos:
+# Pre-commit versions self-update
+  - repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
+    rev: v0.9.0
+    hooks:
+      - id: pre-commit-update
+        args: [--dry-run]
+
+# All files + miscellaneous
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: forbid-new-submodules
+      - id: no-commit-to-branch
+        args: [--branch, master]
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        types: [text]
+      - id: fix-byte-order-marker
+        types: [text]
+      - id: mixed-line-ending
+        args: [--fix=auto]
+        types: [text]
+      - id: check-merge-conflict
+        types: [text]
+      - id: detect-private-key
+        types: [text]
+      - id: check-executables-have-shebangs
+        types: [text, executable]
+      - id: check-shebang-scripts-are-executable
+        types: [text]
+      - id: check-json
+        types: [json]
+      - id: pretty-format-json
+        args: [--no-sort-keys, --autofix, --no-ensure-ascii]
+        types: [json]
+      - id: check-symlinks
+        types: [symlink]
+      - id: destroyed-symlinks
+      - id: check-toml
+        types: [toml]
+      - id: check-yaml
+        types: [yaml]
+      - id: name-tests-test
+        args: [--django]
+        files: (^|/)tests/.+\.py$
+      - id: check-ast
+        types: [python]
+      - id: check-builtin-literals
+        types: [python]
+      - id: check-docstring-first
+        types: [python]
+      - id: debug-statements
+        types: [python]
+      - id: requirements-txt-fixer
+
+# Markdown, see https://pymarkdown.readthedocs.io/en/latest/rules/ for rules/config
+  - repo: https://github.com/jackdewinter/pymarkdown/
+    rev: v0.9.36
+    hooks:
+      - id: pymarkdown
+        types: [markdown]
+
+# YAML
+  - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+    rev: 0.2.3
+    hooks:
+      - id: yamlfmt
+        args: [--mapping, '4', --sequence, '4', --offset, '2', --width, '120']
+        types: [yaml]
+
+# Python
+  - repo: local
+    hooks:
+      - id: format
+        name: Format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: lint
+        name: Lint
+        entry: uv run ruff check
+        language: system
+        types: [python]

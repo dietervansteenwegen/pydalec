@@ -1,0 +1,194 @@
+# See https://peps.python.org/pep-0621/
+
+[project]
+name = 'pydalec'
+description = 'Library for the In-situ Marine Optics Dynamic Above-water radiance (L) and irradiance (E) Collector (DALEC).'
+readme = 'README.md'
+license = { file = 'LICENSE' }
+requires-python = ">=3.11"
+authors = [{ name = 'Dieter Vansteenwegen', email = 'github@boxfish.be' }]
+
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Programming Language :: Python',
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: Microsoft :: Windows :: Windows 10",
+    "Operating System :: Microsoft :: Windows :: Windows 11",
+    "Operating System :: POSIX :: Linux",
+]
+
+keywords = ['DALEC']
+
+dependencies = []
+
+dynamic = ["version"]
+
+[project.urls]
+Homepage = 'https://boxfish.be'
+Repository = 'https://github.com/dietervansteenwegen/pydalec.git'
+Changelog = 'https://github.com/dietervansteenwegen/pydalec/blob/master/CHANGELOG.md'
+# Documentation = 'https://readthedocs.org'
+
+# [project.scripts]
+# pydalec_cli = 'pydalec.__main__:run'
+
+[build-system]
+requires = ["hatchling", "versioningit"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    # "pydalec",
+    "pre-commit>=4.1.0",
+    "deptry>=0.22.0",
+    "ruff>=0.9.6",
+    "vulture>=2.14",
+    "sphinx>=8.2.1",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinxcontrib-napoleon>=0.7",
+    "recommonmark>=0.7.1",
+    "sphinx-copybutton>=0.5.2",
+    "sphinx-toggleprompt>=0.6.0",
+    "myst-parser>=4.0.1",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "tox",
+]
+# mock = ["pydalec-mock"]
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit]
+
+[tool.versioningit.write]
+file = "src/pydalec/__version__.py"
+
+[tool.uv.pip]
+generate-hashes = true
+
+[tool.uv.sources]
+pydalec = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pydalec"]
+# [tool.hatch.build.targets.wheel.force-include]
+# "src/pydalec/data" = "pydalec/data"
+[tool.setuptools.packages.find]
+where = ['src']
+include = [
+    'pydalec',
+] # package names should match these glob patterns (['*'] by default)
+# exclude = ['my_package.tests*'] # exclude packages matching these glob patterns (empty by default)
+
+[tool.ruff]
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".nox",
+    ".ruff_cache",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "build",
+    "dist",
+    "venv",
+    "docs",
+
+]
+target-version = "py39"
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = [
+    # Pycodestyle errors
+    "E",
+    # Pycodestyle warnings
+    "W",
+    # Pyflakes
+    "F",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+    # McCabe complex structure
+    "C901",
+    # PEP8 Naming
+    "N",
+    # Flake8-Bandit
+    "S",
+    # Flake8-builtins
+    "A",
+    # Flake8-commas
+    "COM",
+    # Flake8-datetimez
+    "DTZ",
+    # Flake8-errmsg
+    "EM",
+    # Flake8-use-pathlib
+    "PTH",
+    # tryceratops
+    "TRY",
+    # pydocstyle
+    "D",
+]
+
+ignore = [
+    # Use logging.exception instead of logging.error
+    "TRY400",
+    # Raising and catching exceptions in the same block may lead to confusion
+    "TRY301",
+    # Do not run missing-trailing-comma together with formatter (see https://docs.astral.sh/ruff/rules/missing-trailing-comma/#formatter-compatibility)
+    "COM812",
+
+    # Missing docstring in public module (too noisy for small projects)
+    "D100",
+    # Missing docstring in __init__ (covered by per-file ignores)
+    "D104",
+]
+
+# Allow fix for all enabled rules (when `--fix`) is provided.
+fixable = ["ALL"]
+unfixable = []
+
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Ignore `D104` (missing docstring in public package) in all `__init__.py` files
+"__init__.py" = ["D104"]
+# "docs/conf.py" = ["D100", "D101", "D105"]
+# Ignore `S101` (use of `assert` detected) for pytest files
+# Ignore `PLR2004` (magic value used in comparison) for pytest files
+# Ignore `INP001` (file is part of an implicit namespace package) for pytest files
+# Ignore `N802` (function name should be lowercase) for pytest files
+"tests/**/*.py" = ["S101", "PLR2004", "INP001", "N802"]
+
+[tool.ruff.format]
+quote-style = "single"
+indent-style = "space"
+skip-magic-trailing-comma = false
+exclude = ["*.pyi"]
+
+[tool.vulture]
+exclude = []
+ignore_names = ['args', 'kwargs']
+min_confidence = 60
+paths = ['./src']
+# ignore_decorators = ["@app.route", "@require_*"]
+# make_whitelist = true
+# sort_by_size = true
+# verbose = true
+
+[tool.pymarkdown]
+plugins.MD013.line_length = 100
+ignore_files = ["./docs/source/readme_link.md"]

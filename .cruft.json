@@ -1,0 +1,25 @@
+{
+  "template": "https://www.github.com/dietervansteenwegen/python_cookie.git",
+  "commit": "f9d6d168b2f62fb5d3644414600572487fdee418",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "project_name": "pyDALEC",
+      "project_name_short": "pydalec",
+      "project_link": "https://www.boxfish.be",
+      "module_name": "pydalec",
+      "class_name": "PyDalec",
+      "project_description": "Driver for the In-situ Marine Optics Dynamic Above-water radiance (L) and irradiance (E) Collector (DALEC).",
+      "keywords": "DALEC",
+      "use_config_file": false,
+      "add_documentation": true,
+      "add_gui": false,
+      "create_assets_dir": true,
+      "add_data_dir": true,
+      "create_env_template": false,
+      "_template": "https://www.github.com/dietervansteenwegen/python_cookie.git",
+      "_commit": "f9d6d168b2f62fb5d3644414600572487fdee418"
+    }
+  },
+  "directory": null
+}

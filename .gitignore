@@ -1,0 +1,72 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+sdist/
+wheels/
+*.egg-info/
+*.egg
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Sphinx documentation
+docs/build/
+
+# Environments
+venv/
+.venv/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Cython debug symbols
+cython_debug/
+
+### zip files ###
+*.zip
+
+### Credentials file
+credentials*
+
+# ### VisualStudioCode ###
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+# !.vscode/extensions.json
+
+### Ruff files ###
+.ruff_cache/
+
+### Environment files
+.env
+.env.*
+
+### Own application logs
+*.log
+*.log.1
+*.log.2
+*.log.3
+*.log.4
+*.log.5
+logs/
+
+### Own generated files
+*.pdf
+*.svg
+*.csv
+*.db
+sourcetrail/
+generated/
