@@ -22,7 +22,7 @@ print(client.do_something())
 
 ## Features
 
-- Sync + async client
+- Sync + async (planned) client
 - Built-in mock instrument
 - Optional simulator package ([mock] extra)
 
