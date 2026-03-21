@@ -13,6 +13,10 @@ prep_for_tagging:
 	@echo "🚀 Checking for dead code: Running Vulture"
 	@uv run vulture ./src
 
+.PHONY: lint
+## Lint code using Ruff
+	@uv run ruff lint
+
 .PHONY: cleanup_git
 ## List all local branches in a temporary file. Afterwards remove all branches from file.
 cleanup_git:
