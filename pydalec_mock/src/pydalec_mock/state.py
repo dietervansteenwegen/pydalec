@@ -7,3 +7,4 @@ class InstrumentState:
     def __init__(self):
         """Initialize the default instrument state values."""
         self.temperature = 25.0
+        self._last_command = None

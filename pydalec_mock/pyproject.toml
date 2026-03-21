@@ -7,9 +7,17 @@ dependencies = []
 
 [project.scripts]
 pydalec-mock = "pydalec_mock.async_server:main"
+[dependency-groups]
+dev = ["pydalec-mock", "ruff>=0.9.6", "tox"]
 
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.uv.workspace]
+members = ["."]
+
+[tool.uv.sources]
+pydalec-mock = { workspace = true, editable = true }
