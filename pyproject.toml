@@ -171,7 +171,8 @@ convention = "google"
 # Ignore `PLR2004` (magic value used in comparison) for pytest files
 # Ignore `INP001` (file is part of an implicit namespace package) for pytest files
 # Ignore `N802` (function name should be lowercase) for pytest files
-"tests/**/*.py" = ["S101", "PLR2004", "INP001", "N802"]
+# Ignore 'D' (docstrings required for classes/methods/...) for pytest files
+"tests/**/*.py" = ["S101", "PLR2004", "INP001", "N802", "D"]
 
 [tool.ruff.format]
 quote-style = "single"
