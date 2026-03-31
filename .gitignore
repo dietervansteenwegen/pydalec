@@ -15,6 +15,9 @@ wheels/
 *.egg-info/
 *.egg
 
+# Pytest:
+.coverage
+
 # Flask stuff:
 instance/
 .webassets-cache
