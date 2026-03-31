@@ -20,7 +20,7 @@ classifiers = [
 
 keywords = ['DALEC']
 
-dependencies = []
+dependencies = ["pydantic>=2.12.5"]
 
 dynamic = ["version"]
 
