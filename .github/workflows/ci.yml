@@ -1,0 +1,63 @@
+---
+name: CI
+
+on:
+    push:
+        branches:
+          - master
+    pull_request:
+
+jobs:
+    tox:
+        name: Tox (${{ matrix.toxenv }})
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                  - python-version: '3.11'
+                    toxenv: py311
+                  - python-version: '3.12'
+                    toxenv: py312
+                  - python-version: '3.13'
+                    toxenv: py313
+
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Set up Python
+            uses: actions/setup-python@v5
+            with:
+                python-version: ${{ matrix.python-version }}
+
+          - name: Set up uv
+            uses: astral-sh/setup-uv@v4
+
+          - name: Install dev dependencies
+            run: uv sync --group dev
+
+          - name: Run tox
+            run: uv run tox -e ${{ matrix.toxenv }}
+
+    pre-commit:
+        name: Pre-commit hooks
+        runs-on: ubuntu-latest
+
+        steps:
+          - name: Checkout
+            uses: actions/checkout@v4
+
+          - name: Set up Python
+            uses: actions/setup-python@v5
+            with:
+                python-version: '3.13'
+
+          - name: Set up uv
+            uses: astral-sh/setup-uv@v4
+
+          - name: Install dev dependencies
+            run: uv sync --group dev
+
+          - name: Run all pre-commit hooks
+            run: uv run pre-commit run --all-files
