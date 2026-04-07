@@ -55,7 +55,7 @@ Using `pydalec-mock`:
 
 - Simulates a real instrument through a TCP server
 - Run pydalec-mock (optional dependency) as a local server
-- Real network connection via TCP or AsyncTCPTransport to simulator
+- Real network connection via the telnet transport to the simulator
 
 ## Release History
 

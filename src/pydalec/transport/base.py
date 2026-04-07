@@ -15,3 +15,8 @@ class BaseTransport(ABC):
     def receive(self) -> str:
         """Receive a response string from the transport backend."""
         pass
+
+    @abstractmethod
+    def close(self) -> None:
+        """Release any transport resources held by the backend."""
+        pass

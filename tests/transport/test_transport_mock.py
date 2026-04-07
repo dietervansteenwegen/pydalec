@@ -59,3 +59,10 @@ def test_mock_transport_receive_applies_delay(monkeypatch):
 
     transport.receive()
     assert sleep_calls == [0.25]
+
+
+def test_mock_transport_close_is_noop():
+    """Verify close can be called without changing mock behavior."""
+    transport = MockTransport()
+
+    assert transport.close() is None

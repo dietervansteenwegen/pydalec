@@ -20,7 +20,7 @@ classifiers = [
 
 keywords = ['DALEC']
 
-dependencies = ["pydantic>=2.12.5"]
+dependencies = ["pydantic>=2.12.5", "telnetlib3>=4.0.1"]
 
 dynamic = ["version"]
 
@@ -29,9 +29,6 @@ Homepage = 'https://boxfish.be'
 Repository = 'https://github.com/dietervansteenwegen/pydalec.git'
 Changelog = 'https://github.com/dietervansteenwegen/pydalec/blob/master/CHANGELOG.md'
 # Documentation = 'https://readthedocs.org'
-
-# [project.scripts]
-# pydalec_cli = 'pydalec.__main__:run'
 
 [build-system]
 requires = ["hatchling", "versioningit"]

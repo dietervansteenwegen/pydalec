@@ -3,7 +3,7 @@ name = "pydalec-mock"
 version = "0.1.0"
 description = "Mock server for pydalec instrument"
 requires-python = ">=3.9"
-dependencies = []
+dependencies = ["telnetlib3>=4.0.1"]
 
 [project.scripts]
 pydalec-mock = "pydalec_mock.async_server:main"

@@ -3,8 +3,10 @@
 import random
 import time
 
+from .base import BaseTransport
 
-class MockTransport:
+
+class MockTransport(BaseTransport):
     """Mock synchronous transport that simulates DALEC responses."""
 
     def __init__(self, delay=0.0, error_rate=0.0):
@@ -30,3 +32,7 @@ class MockTransport:
             return f'{self.temperature:.2f}'
 
         return 'ERROR'
+
+    def close(self) -> None:
+        """Release mock transport resources."""
+        return None
