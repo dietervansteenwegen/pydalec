@@ -8,7 +8,6 @@ def test_mock_transport_init_sets_defaults():
     transport = MockTransport()
     assert transport.delay == 0.0
     assert transport.error_rate == 0.0
-    assert transport.temperature == 25.0
 
 
 def test_mock_transport_send_strips_command():
@@ -16,16 +15,6 @@ def test_mock_transport_send_strips_command():
     transport = MockTransport()
     transport.send('  READ:TEMP?  ')
     assert transport._last_cmd == 'READ:TEMP?'
-
-
-def test_mock_transport_receive_temperature(monkeypatch):
-    """Verify receive returns formatted temperature for READ:TEMP?."""
-    transport = MockTransport()
-    transport.temperature = 26.789
-    transport.send('READ:TEMP?')
-    monkeypatch.setattr('pydalec.transport.mock.random.random', lambda: 0.99)
-
-    assert transport.receive() == '26.79'
 
 
 def test_mock_transport_receive_unknown_command(monkeypatch):

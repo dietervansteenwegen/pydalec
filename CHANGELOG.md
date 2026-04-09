@@ -2,6 +2,10 @@
 
 ## Not released yet
 
-## v0.1.0
+### Added
 
-- Initial release
+### Changed
+
+### Fixed
+
+### Removed

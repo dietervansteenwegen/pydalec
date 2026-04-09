@@ -13,27 +13,19 @@
 Replace `MockTransport` with your connection/correct IP to connect to a real instrument.
 
 ```python
-from pydalec.client import DALECClient
-from pydalec.transport.mock import MockTransport
+from pydalec import DALEC
 
-client = DALECClient(MockTransport())
-print(client.do_something())
+dalec = DALEC.connect_tcp(host= '192.168.2.11') # port attribute defaults to 23
+dalec
+# DALEC at 192.168.2.11:23
 ```
 
 ## Features
 
-- Sync + async (planned) client
 - Built-in mock instrument
 - Optional simulator package ([mock] extra)
 
-### Testing options
-
-| Option        | Use case                                                          |
-| ------------- | ----------------------------------------------------------------- |
-| MockTransport | Lightweight option for unit testing                               |
-| PyDalecMock   | Mock instrument for local testing over IP for integration testing |
-
-#### MockTransport
+### MockTransport
 
 - No network connection required
 - Fast
@@ -43,13 +35,13 @@ Example:
 
 ```python
 from pydalec.client import DALECClient
-from pydalec.transport.mock import MockTransport
+from pydalec.transport import MockTransport
 
 client = DALECClient(MockTransport())
 assert client.get_temperature() == 25.0
 ```
 
-#### Integration tests
+### Integration tests
 
 Using `pydalec-mock`:
 

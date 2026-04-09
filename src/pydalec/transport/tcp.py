@@ -8,8 +8,7 @@ from pydantic import ValidationError
 from telnetlib3.sync import TelnetConnection
 
 from pydalec.measurement import Measurement
-
-from .base import BaseTransport
+from pydalec.transport.base import BaseTransport
 
 
 class TCPTransport(BaseTransport):
@@ -29,6 +28,8 @@ class TCPTransport(BaseTransport):
         self._closed = False
         self._reader_thread = threading.Thread(target=self._read_connection, daemon=True)
         self._reader_thread.start()
+        self._host = host
+        self._port = port
 
     def set_measurement_log_size(self, size: int) -> None:
         """Resize the measurement log while preserving existing records.
@@ -92,3 +93,11 @@ class TCPTransport(BaseTransport):
 
         with self._measurement_log_lock:
             self.measurement_log.append(measurement)
+
+    def __str__(self) -> str:
+        """String representation of TCPTransport instance.
+
+        Returns:
+            str: formatted string showing the host and port of the TCPTransport instance.
+        """
+        return f'TCPTransport at {self._host}:{self._port}'

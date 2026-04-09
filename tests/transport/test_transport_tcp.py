@@ -281,3 +281,16 @@ def test_tcp_transport_resize_measurement_log_rejects_invalid_size(monkeypatch):
     else:
         err_msg = 'Expected ValueError for size=0'
         raise AssertionError(err_msg)
+
+
+def test_tcp_transport_str_includes_host_and_port(monkeypatch):
+    """Verify __str__ includes host and port."""
+    fake_connection = _FakeTelnetConnection()
+    monkeypatch.setattr(
+        'pydalec.transport.tcp.TelnetConnection',
+        lambda _host, _port, **_kwargs: fake_connection,
+    )
+
+    transport = TCPTransport('example.com', 2323)
+
+    assert str(transport) == 'TCPTransport at example.com:2323'
