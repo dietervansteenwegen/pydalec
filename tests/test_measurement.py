@@ -1,6 +1,7 @@
 """Unit tests for `pydalec.measurement`."""
 
 import datetime
+import math
 
 import pytest
 from pydantic import ValidationError
@@ -42,6 +43,9 @@ class TestHasMaxDecimals:
     def test_negative_value_fails(self):
         assert _has_max_decimals(-1.12, 1) is False
 
+    def test_nan_value_passes(self):
+        assert _has_max_decimals(float('nan'), 3) is True
+
 
 # ---------------------------------------------------------------------------
 # Coordinates
@@ -69,6 +73,12 @@ class TestCoordinates:
     def test_lon_too_high(self):
         with pytest.raises(ValidationError):
             Coordinates(lat=0.0, lon=180.1)
+
+    def test_nan_coordinates_allowed(self):
+        c = Coordinates(lat=float('nan'), lon=float('nan'))
+
+        assert math.isnan(c.lat)
+        assert math.isnan(c.lon)
 
     def test_extra_field_forbidden(self):
         with pytest.raises(ValidationError):
@@ -129,19 +139,28 @@ class TestTelemetry:
         t = self._valid_telemetry(temperature_diode_celsius=23.456)
         assert t.temperature_diode_celsius == 23.456
 
+    def test_nan_telemetry_values_allowed(self):
+        t = self._valid_telemetry(
+            voltage_volts=float('nan'),
+            humidity_mm_hg=float('nan'),
+            temperature_diode_celsius=float('nan'),
+        )
+
+        assert math.isnan(t.voltage_volts)
+        assert math.isnan(t.humidity_mm_hg)
+        assert math.isnan(t.temperature_diode_celsius)
+
     def test_status_flag_zero(self):
         t = self._valid_telemetry(status_flag=0)
         assert t.status_flag == 0
-        assert t.status_flag.name == 'STATIONARY'
 
     def test_status_flag_one(self):
         t = self._valid_telemetry(status_flag=1)
         assert t.status_flag == 1
-        assert t.status_flag.name == 'MOVING'
 
     def test_invalid_status_flag(self):
         with pytest.raises(ValidationError):
-            self._valid_telemetry(status_flag=2)
+            self._valid_telemetry(status_flag=-1)
 
     def test_extra_field_forbidden(self):
         with pytest.raises(ValidationError):
@@ -163,15 +182,13 @@ class TestTelemetry:
         assert '12.1' in result
         assert '55.3' in result
         assert '23.456' in result
-        assert 'flag:STATIONARY' in result
+        assert 'flag:0' in result
 
     def test_status_flag_accepts_enum_directly(self):
         from pydalec.measurement import StatusFlag
 
         t = self._valid_telemetry(status_flag=StatusFlag.MOVING)
         assert t.status_flag == StatusFlag.MOVING
-        assert t.status_flag.value == 1
-        assert t.status_flag.name == 'MOVING'
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +225,36 @@ def _valid_measurement(**overrides) -> dict:
     }
     base.update(overrides)
     return base
+
+
+def _measurement_to_raw_data(**overrides) -> str:
+    measurement = Measurement(**_valid_measurement(**overrides))
+    fields = [
+        measurement.device_id,
+        str(int(measurement.serial_number)),
+        measurement.channel_type,
+        measurement.utc_time.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+        str(measurement.location.lat),
+        str(measurement.location.lon),
+        str(measurement.sat_compass_heading),
+        str(measurement.solar_azimuth_deg),
+        str(measurement.solar_zenith_deg),
+        str(measurement.gear_position_deg),
+        str(measurement.azimuth_deg),
+        str(measurement.relative_azimuth_deg),
+        str(measurement.pitch_start_measurement_deg),
+        str(measurement.roll_start_measurement_deg),
+        str(measurement.telemetry.voltage_volts),
+        str(measurement.telemetry.humidity_mm_hg),
+        str(measurement.telemetry.temperature_diode_celsius),
+        f'{measurement.telemetry.status_flag:04b}',
+        str(measurement.int_time),
+        str(measurement.signal_percentage),
+        str(measurement.dark_counts),
+        str(measurement.max_counts),
+        *[str(value) for value in measurement.spectrum],
+    ]
+    return ','.join(fields)
 
 
 class TestMeasurement:
@@ -273,6 +320,24 @@ class TestMeasurement:
         with pytest.raises(ValidationError):
             Measurement(**_valid_measurement(signal_percentage=100.1))
 
+    def test_nan_measurement_floats_allowed(self):
+        measurement = Measurement(
+            **_valid_measurement(
+                sat_compass_heading=float('nan'),
+                solar_azimuth_deg=float('nan'),
+                solar_zenith_deg=float('nan'),
+                gear_position_deg=float('nan'),
+                azimuth_deg=float('nan'),
+                relative_azimuth_deg=float('nan'),
+                pitch_start_measurement_deg=float('nan'),
+                roll_start_measurement_deg=float('nan'),
+                signal_percentage=float('nan'),
+            )
+        )
+
+        assert math.isnan(measurement.sat_compass_heading)
+        assert math.isnan(measurement.signal_percentage)
+
     def test_dark_counts_out_of_range(self):
         with pytest.raises(ValidationError):
             Measurement(**_valid_measurement(dark_counts=65536))
@@ -302,7 +367,25 @@ class TestMeasurement:
             Measurement(**_valid_measurement(unknown_field='bad'))
 
     def test_from_raw_data(self):
-        m = Measurement(**_valid_measurement())
-        json_str = m.model_dump_json()
-        restored = Measurement.from_raw_data(json_str)
-        assert restored == m
+        restored = Measurement.from_raw_data(_measurement_to_raw_data(serial_number='0010'))
+
+        assert restored == Measurement(**_valid_measurement())
+
+    def test_from_raw_data_zero_pads_serial_number(self):
+        restored = Measurement.from_raw_data(_measurement_to_raw_data(serial_number='0011'))
+
+        assert restored.serial_number == '0011'
+
+    def test_from_raw_data_accepts_instrument_style_serial_field(self):
+        raw_data = _measurement_to_raw_data(serial_number='0011').replace(',11,', ',11,', 1)
+
+        restored = Measurement.from_raw_data(raw_data)
+
+        assert restored.serial_number == '0011'
+
+    def test_from_raw_data_accepts_nan_values(self):
+        raw_data = _measurement_to_raw_data(serial_number='0011').replace(',180.0,', ',nan,', 1)
+
+        restored = Measurement.from_raw_data(raw_data)
+
+        assert math.isnan(restored.sat_compass_heading)

@@ -4,17 +4,44 @@ from __future__ import annotations
 
 import datetime
 import enum
+import math
 from decimal import Decimal
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+RAW_DATA_FIXED_FIELD_COUNT = 22
+SPECTRUM_LENGTH = 190
+RAW_DATA_FIELD_COUNT = RAW_DATA_FIXED_FIELD_COUNT + SPECTRUM_LENGTH
+
 
 def _has_max_decimals(value: float, decimals: int) -> bool:
     """Check if a float value has at most a specified number of decimal places."""
+    if math.isnan(value):
+        return True
     decimal_value = Decimal(str(value))
     quantized_value: Decimal = decimal_value.quantize(Decimal(1).scaleb(-decimals))
     return decimal_value == quantized_value
+
+
+def _parse_utc_timestamp(value: str) -> datetime.datetime:
+    """Parse a UTC timestamp emitted by the instrument."""
+    return datetime.datetime.fromisoformat(value.replace('Z', '+00:00'))
+
+
+def _normalize_serial_number(value: str) -> str:
+    """Normalize instrument serial numbers to the model's four-digit format."""
+    return value.zfill(4) if value.isdigit() and len(value) < 4 else value
+
+
+def _validate_range_or_nan(value: float, minimum: float, maximum: float, field_name: str) -> float:
+    """Accept NaN for unavailable readings; otherwise enforce the numeric range."""
+    if math.isnan(value):
+        return value
+    if value < minimum or value > maximum:
+        err_msg = f'{field_name} must be in range {minimum}..{maximum}'
+        raise ValueError(err_msg)
+    return value
 
 
 class StatusFlag(enum.IntEnum):
@@ -32,8 +59,18 @@ class Coordinates(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    lat: float = Field(ge=-90.0, le=90.0)
-    lon: float = Field(ge=-180.0, le=180.0)
+    lat: float
+    lon: float
+
+    @field_validator('lat')
+    @classmethod
+    def _validate_lat(cls, value: float) -> float:
+        return _validate_range_or_nan(value, -90.0, 90.0, 'lat')
+
+    @field_validator('lon')
+    @classmethod
+    def _validate_lon(cls, value: float) -> float:
+        return _validate_range_or_nan(value, -180.0, 180.0, 'lon')
 
     def __str__(self) -> str:
         """String representation in the format 'lat,lon' with N/S and E/W."""
@@ -68,7 +105,7 @@ class Telemetry(BaseModel):
     voltage_volts: float
     humidity_mm_hg: float
     temperature_diode_celsius: float
-    status_flag: StatusFlag  # 0 = stationary, 1 = moving during integration
+    status_flag: int = Field(ge=0)  # multi-bit quality flag from instrument Qflag field
 
     @field_validator('voltage_volts')
     @classmethod
@@ -103,7 +140,7 @@ class Telemetry(BaseModel):
         """
         return (
             f'Voltage:{self.voltage_volts:04.1f};Humidity:{self.humidity_mm_hg:04.1f};Temperature:'
-            f'{self.temperature_diode_celsius:06.3f};Status flag:{self.status_flag.name}'
+            f'{self.temperature_diode_celsius:06.3f};Status flag:{self.status_flag}'
         )
 
 
@@ -117,17 +154,17 @@ class Measurement(BaseModel):
     channel_type: Literal['Ed', 'Lu', 'Lsky']
     utc_time: datetime.datetime
     location: Coordinates
-    sat_compass_heading: float = Field(ge=0.0, le=359.9)
-    solar_azimuth_deg: float = Field(ge=0.0, le=359.9)
-    solar_zenith_deg: float = Field(ge=0.0, le=359.9)
-    gear_position_deg: float = Field(ge=-179.9, le=180.0)
-    azimuth_deg: float = Field(ge=0.0, le=359.9)
-    relative_azimuth_deg: float = Field(ge=-179.9, le=180.0)
-    pitch_start_measurement_deg: float = Field(ge=-90.0, le=90.0)
-    roll_start_measurement_deg: float = Field(ge=-179.9, le=180.0)
+    sat_compass_heading: float
+    solar_azimuth_deg: float
+    solar_zenith_deg: float
+    gear_position_deg: float
+    azimuth_deg: float
+    relative_azimuth_deg: float
+    pitch_start_measurement_deg: float
+    roll_start_measurement_deg: float
     telemetry: Telemetry
     int_time: int = Field(ge=1, le=6000)
-    signal_percentage: float = Field(ge=0.0, le=100.0)
+    signal_percentage: float
     dark_counts: int = Field(ge=0, le=65535)
     max_counts: int = Field(ge=0, le=65535)
     spectrum: list[int] = Field(
@@ -152,7 +189,66 @@ class Measurement(BaseModel):
             raise ValueError(err_msg)
         return value
 
+    @field_validator(
+        'sat_compass_heading',
+        'solar_azimuth_deg',
+        'solar_zenith_deg',
+        'azimuth_deg',
+    )
+    @classmethod
+    def _validate_bearing_fields(cls, value: float, info) -> float:
+        return _validate_range_or_nan(value, 0.0, 359.9, info.field_name)
+
+    @field_validator('gear_position_deg', 'relative_azimuth_deg', 'roll_start_measurement_deg')
+    @classmethod
+    def _validate_signed_heading_fields(cls, value: float, info) -> float:
+        return _validate_range_or_nan(value, -179.9, 180.0, info.field_name)
+
+    @field_validator('pitch_start_measurement_deg')
+    @classmethod
+    def _validate_pitch_field(cls, value: float) -> float:
+        return _validate_range_or_nan(value, -90.0, 90.0, 'pitch_start_measurement_deg')
+
+    @field_validator('signal_percentage')
+    @classmethod
+    def _validate_signal_percentage(cls, value: float) -> float:
+        return _validate_range_or_nan(value, 0.0, 100.0, 'signal_percentage')
+
     @classmethod
     def from_raw_data(cls, raw_data: str) -> Self:
         """Factory method from string to Measurement model."""
-        return cls.model_validate_json(raw_data)
+        fields = [field.strip() for field in raw_data.strip().split(',')]
+        if len(fields) != RAW_DATA_FIELD_COUNT:
+            err_msg = f'raw_data must contain {RAW_DATA_FIELD_COUNT} comma-separated fields'
+            raise ValueError(err_msg)
+
+        payload = {
+            'device_id': fields[0],
+            'serial_number': _normalize_serial_number(fields[1]),
+            'channel_type': fields[2],
+            'utc_time': _parse_utc_timestamp(fields[3]),
+            'location': {
+                'lat': float(fields[4]),
+                'lon': float(fields[5]),
+            },
+            'sat_compass_heading': float(fields[6]),
+            'solar_azimuth_deg': float(fields[7]),
+            'solar_zenith_deg': float(fields[8]),
+            'gear_position_deg': float(fields[9]),
+            'azimuth_deg': float(fields[10]),
+            'relative_azimuth_deg': float(fields[11]),
+            'pitch_start_measurement_deg': float(fields[12]),
+            'roll_start_measurement_deg': float(fields[13]),
+            'telemetry': {
+                'voltage_volts': float(fields[14]),
+                'humidity_mm_hg': float(fields[15]),
+                'temperature_diode_celsius': float(fields[16]),
+                'status_flag': int(fields[17], 2),
+            },
+            'int_time': int(fields[18]),
+            'signal_percentage': float(fields[19]),
+            'dark_counts': int(fields[20]),
+            'max_counts': int(fields[21]),
+            'spectrum': [int(value) for value in fields[RAW_DATA_FIXED_FIELD_COUNT:]],
+        }
+        return cls.model_validate(payload)

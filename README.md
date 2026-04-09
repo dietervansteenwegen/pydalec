@@ -9,13 +9,16 @@
 ## Usage example
 
 ```python
-> from pydalec import DALEC
+>>> from pydalec import DALEC
 
-> IP:str = '192.168.2.11'  # Replace with your correct IP
+>>> IP:str = '192.168.2.11'  # Replace with your correct IP
 
-> dalec = DALEC.connect_tcp(host= IP)
-> dalec
+>>> dalec = DALEC.connect_tcp(host= IP)
+>>> dalec
 DALEC at TCPTransport (192.168.2.11:23)
+
+>>> dalec.start_measurements()
+>>> dalec.measurement_log[0]
 ```
 
 ## Release History

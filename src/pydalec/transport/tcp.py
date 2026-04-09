@@ -111,7 +111,7 @@ class TCPTransport(BaseTransport):
     def _handle_incoming_data(self, message: str) -> None:
         try:
             measurement = Measurement.from_raw_data(message)
-        except ValidationError:
+        except (ValidationError, ValueError):
             self._responses.append(message)
             return
 

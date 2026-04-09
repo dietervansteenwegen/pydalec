@@ -35,7 +35,32 @@ def _measurement_payload(serial_number: str) -> str:
         max_counts=60000,
         spectrum=[1000] * 190,
     )
-    return measurement.model_dump_json() + '\n'
+    fields = [
+        measurement.device_id,
+        str(int(measurement.serial_number)),
+        measurement.channel_type,
+        measurement.utc_time.isoformat(timespec='milliseconds').replace('+00:00', 'Z'),
+        str(measurement.location.lat),
+        str(measurement.location.lon),
+        str(measurement.sat_compass_heading),
+        str(measurement.solar_azimuth_deg),
+        str(measurement.solar_zenith_deg),
+        str(measurement.gear_position_deg),
+        str(measurement.azimuth_deg),
+        str(measurement.relative_azimuth_deg),
+        str(measurement.pitch_start_measurement_deg),
+        str(measurement.roll_start_measurement_deg),
+        str(measurement.telemetry.voltage_volts),
+        str(measurement.telemetry.humidity_mm_hg),
+        str(measurement.telemetry.temperature_diode_celsius),
+        f'{measurement.telemetry.status_flag:04b}',
+        str(measurement.int_time),
+        str(measurement.signal_percentage),
+        str(measurement.dark_counts),
+        str(measurement.max_counts),
+        *[str(value) for value in measurement.spectrum],
+    ]
+    return ','.join(fields) + '\n'
 
 
 class _FakeTelnetConnection:

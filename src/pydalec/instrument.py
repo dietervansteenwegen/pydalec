@@ -36,13 +36,14 @@ class DALEC:
         self.transport.disconnect()
         self.status._connected = False
 
+    @property
     def connected(self) -> bool:
         """Return True if the client is currently connected to the instrument."""
         return self.status._connected
 
     def connect(self) -> None:
         """Reconnect to the instrument if currently disconnected."""
-        if not self.connected():
+        if not self.connected:
             self.transport.connect()
             self.status._connected = True
 
@@ -50,6 +51,14 @@ class DALEC:
     def measurement_log(self):
         """Return a list of recent measurements from the instrument."""
         return list(self.transport.measurement_log)
+
+    def ___repr__(self) -> str:
+        """Representation of DALEC instance.
+
+        Returns:
+            str: formatted string showing the transport information of the DALEC instance.
+        """
+        return self.__str__()
 
     def __str__(self) -> str:
         """Return string representation of the class.
