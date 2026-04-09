@@ -17,41 +17,8 @@ def test_mock_transport_send_strips_command():
     assert transport._last_cmd == 'READ:TEMP?'
 
 
-def test_mock_transport_receive_unknown_command(monkeypatch):
-    """Verify unknown commands return ERROR."""
-    transport = MockTransport()
-    transport.send('READ:HUM?')
-    monkeypatch.setattr('pydalec.transport.mock.random.random', lambda: 0.99)
-
-    assert transport.receive() == 'ERROR'
-
-
-def test_mock_transport_receive_error_rate(monkeypatch):
-    """Verify random error path returns ERROR."""
-    transport = MockTransport(error_rate=0.5)
-    transport.send('READ:TEMP?')
-    monkeypatch.setattr('pydalec.transport.mock.random.random', lambda: 0.1)
-
-    assert transport.receive() == 'ERROR'
-
-
-def test_mock_transport_receive_applies_delay(monkeypatch):
-    """Verify receive sleeps when delay is configured."""
-    sleep_calls = []
-    transport = MockTransport(delay=0.25)
-    transport.send('READ:TEMP?')
-
-    monkeypatch.setattr('pydalec.transport.mock.random.random', lambda: 0.99)
-    monkeypatch.setattr(
-        'pydalec.transport.mock.time.sleep', lambda value: sleep_calls.append(value)
-    )
-
-    transport.receive()
-    assert sleep_calls == [0.25]
-
-
-def test_mock_transport_close_is_noop():
+def test_mock_transport_disconnect_is_noop():
     """Verify close can be called without changing mock behavior."""
     transport = MockTransport()
 
-    assert transport.close() is None
+    assert transport.disconnect() is None

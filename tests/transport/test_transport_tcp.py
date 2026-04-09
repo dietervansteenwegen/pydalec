@@ -44,12 +44,11 @@ class _FakeTelnetConnection:
     def __init__(self, lines=None):
         self.written: list[str] = []
         self.lines = list(lines or [])
-        self.connected = False
+        self._connected = False
         self.flush_calls = 0
-        self.closed = False
 
     def connect(self):
-        self.connected = True
+        self._connected = True
 
     def write(self, data):
         self.written.append(data)
@@ -68,7 +67,7 @@ class _FakeTelnetConnection:
         raise EOFError
 
     def close(self):
-        self.closed = True
+        self._connected = False
 
 
 def test_tcp_transport_init_uses_telnet_connection(monkeypatch):
@@ -87,7 +86,7 @@ def test_tcp_transport_init_uses_telnet_connection(monkeypatch):
     transport = TCPTransport('localhost', 9999)
 
     assert transport._connection is fake_connection
-    assert fake_connection.connected is True
+    assert fake_connection._connected is True
     assert recorded['host'] == 'localhost'
     assert recorded['port'] == 9999
     assert recorded['kwargs'] == {'connect_minwait': 0.0, 'encoding': 'utf8'}
@@ -113,9 +112,9 @@ def test_tcp_transport_send_appends_newline_and_encodes(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    transport.send('READ:TEMP?')
+    transport.send('START')
 
-    assert fake_connection.written == ['READ:TEMP?\n']
+    assert fake_connection.written == ['START\r\n']
     assert fake_connection.flush_calls == 1
 
 
@@ -128,7 +127,7 @@ def test_tcp_transport_receive_decodes_and_strips(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.receive() == 'VALUE'
+    assert transport.get_reply() == 'VALUE'
 
 
 def test_tcp_transport_receive_returns_empty_string_after_eof_on_all_calls(monkeypatch):
@@ -140,8 +139,8 @@ def test_tcp_transport_receive_returns_empty_string_after_eof_on_all_calls(monke
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.receive() == ''
-    assert transport.receive() == ''
+    assert transport.get_reply() is None
+    assert transport.get_reply() is None
 
 
 def test_tcp_transport_reader_stops_on_empty_raw_message(monkeypatch):
@@ -153,8 +152,8 @@ def test_tcp_transport_reader_stops_on_empty_raw_message(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.receive() == ''
-    assert transport.receive() == ''
+    assert transport.get_reply() is None
+    assert transport.get_reply() is None
 
 
 def test_tcp_transport_reader_decodes_bytes_messages(monkeypatch):
@@ -166,7 +165,7 @@ def test_tcp_transport_reader_decodes_bytes_messages(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.receive() == 'VALUE'
+    assert transport.get_reply() == 'VALUE'
 
 
 def test_tcp_transport_logs_unsolicited_measurements(monkeypatch):
@@ -179,7 +178,7 @@ def test_tcp_transport_logs_unsolicited_measurements(monkeypatch):
 
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.receive() == 'OK'
+    assert transport.get_reply() == 'OK'
     assert len(transport.measurement_log) == 1
     assert transport.measurement_log[0].serial_number == '0001'
 
@@ -217,10 +216,10 @@ def test_tcp_transport_close_shuts_down_socket(monkeypatch):
 
     transport = TCPTransport('localhost', 9999)
 
-    transport.close()
-    transport.close()
+    transport.disconnect()
+    transport.disconnect()
 
-    assert fake_connection.closed is True
+    assert fake_connection._connected is False
     assert transport._reader_thread.is_alive() is False
 
 
@@ -233,8 +232,8 @@ def test_tcp_transport_resize_measurement_log_keeps_existing_records(monkeypatch
     )
     transport = TCPTransport('localhost', 9999, measurement_log_size=2)
 
-    transport._record_message(_measurement_payload('0001').strip())
-    transport._record_message(_measurement_payload('0002').strip())
+    transport._handle_incoming_data(_measurement_payload('0001').strip())
+    transport._handle_incoming_data(_measurement_payload('0002').strip())
     transport.set_measurement_log_size(4)
 
     assert transport.measurement_log.maxlen == 4
@@ -253,9 +252,9 @@ def test_tcp_transport_resize_measurement_log_drops_oldest_on_shrink(monkeypatch
     )
     transport = TCPTransport('localhost', 9999, measurement_log_size=4)
 
-    transport._record_message(_measurement_payload('0001').strip())
-    transport._record_message(_measurement_payload('0002').strip())
-    transport._record_message(_measurement_payload('0003').strip())
+    transport._handle_incoming_data(_measurement_payload('0001').strip())
+    transport._handle_incoming_data(_measurement_payload('0002').strip())
+    transport._handle_incoming_data(_measurement_payload('0003').strip())
     transport.set_measurement_log_size(2)
 
     assert transport.measurement_log.maxlen == 2
@@ -293,4 +292,4 @@ def test_tcp_transport_str_includes_host_and_port(monkeypatch):
 
     transport = TCPTransport('example.com', 2323)
 
-    assert str(transport) == 'TCPTransport at example.com:2323'
+    assert str(transport) == 'TCPTransport (example.com:2323)'

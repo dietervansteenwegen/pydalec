@@ -8,46 +8,15 @@
 
 ## Usage example
 
-\#TODO
-
-Replace `MockTransport` with your connection/correct IP to connect to a real instrument.
-
 ```python
-from pydalec import DALEC
+> from pydalec import DALEC
 
-dalec = DALEC.connect_tcp(host= '192.168.2.11') # port attribute defaults to 23
-dalec
-# DALEC at 192.168.2.11:23
+> IP:str = '192.168.2.11'  # Replace with your correct IP
+
+> dalec = DALEC.connect_tcp(host= IP)
+> dalec
+DALEC at TCPTransport (192.168.2.11:23)
 ```
-
-## Features
-
-- Built-in mock instrument
-- Optional simulator package ([mock] extra)
-
-### MockTransport
-
-- No network connection required
-- Fast
-- Deterministic behaviour
-
-Example:
-
-```python
-from pydalec.client import DALECClient
-from pydalec.transport import MockTransport
-
-client = DALECClient(MockTransport())
-assert client.get_temperature() == 25.0
-```
-
-### Integration tests
-
-Using `pydalec-mock`:
-
-- Simulates a real instrument through a TCP server
-- Run pydalec-mock (optional dependency) as a local server
-- Real network connection via the telnet transport to the simulator
 
 ## Release History
 

@@ -1,9 +1,5 @@
 """In-memory synchronous mock transport for DALEC testing."""
 
-import random
-import time
-from typing import Union
-
 from pydalec.transport.base import BaseTransport
 
 
@@ -14,24 +10,42 @@ class MockTransport(BaseTransport):
         """Initialize mock behavior options for delay and error simulation."""
         self.delay = delay
         self.error_rate = error_rate
-        self._last_cmd: Union[str | None] = None
         self.measurement_log: list[str] = []
-        self._state = None
+        self._making_measurements = False
+        self._connected = True
+
+    def start_measurements(self) -> None:
+        """Start the background process for making and receiving measurements."""
+        self._making_measurements = True
+
+    def stop_measurements(self) -> None:
+        """Stop the background process for making and receiving measurements."""
+        self._making_measurements = False
 
     def send(self, data: str) -> None:
         """Store the latest command so a response can be generated."""
         self._last_cmd: str = data.strip()
 
-    def receive(self) -> str:
-        """Return a simulated response for the last received command."""
-        if self.delay:
-            time.sleep(self.delay)
-
-        if random.random() < self.error_rate:  # noqa: S311 # This isn´t cryptography
-            return 'ERROR'
-
-        return 'ERROR'
-
-    def close(self) -> None:
+    def disconnect(self) -> None:
         """Release mock transport resources."""
-        return None
+        self._connected = False
+
+    def connect(self) -> None:
+        """Reconnect the mock transport."""
+        self._connected = True
+
+    def __repr__(self) -> str:
+        """Representation of Mock instance.
+
+        Returns:
+            str: formatted string showing the host and port of the Mock instance.
+        """
+        return self.__str__()
+
+    def __str__(self) -> str:
+        """String representation of Mock instance.
+
+        Returns:
+            str: formatted string showing the host and port of the Mock instance.
+        """
+        return f'MockTransport with delay={self.delay}s and error_rate={self.error_rate:.2%}'
