@@ -13,7 +13,7 @@ class DalecStatus:
         self._connected: bool = True
 
 
-class DALEC:
+class Dalec:
     """Client API for synchronous DALEC commands."""
 
     def __init__(self, transport):
@@ -52,7 +52,7 @@ class DALEC:
         """Return a list of recent measurements from the instrument."""
         return list(self.transport.measurement_log)
 
-    def ___repr__(self) -> str:
+    def __repr__(self) -> str:
         """Representation of DALEC instance.
 
         Returns:
