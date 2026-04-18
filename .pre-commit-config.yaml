@@ -31,6 +31,7 @@ repos:
     rev: v0.9.36
     hooks:
       - id: pymarkdown
+        args: [--config, pyproject.toml, scan]
         types: [markdown]
 
 # YAML

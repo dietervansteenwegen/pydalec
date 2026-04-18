@@ -4,6 +4,8 @@
 
 ### Added
 
+- feat: Add `pydalec-test` TCP CLI
+
 ### Changed
 
 ### Fixed

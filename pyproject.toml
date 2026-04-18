@@ -30,6 +30,9 @@ Repository = 'https://github.com/dietervansteenwegen/pydalec.git'
 Changelog = 'https://github.com/dietervansteenwegen/pydalec/blob/master/CHANGELOG.md'
 # Documentation = 'https://readthedocs.org'
 
+[project.scripts]
+pydalec-test = 'pydalec.cli:main'
+
 [build-system]
 requires = ["hatchling", "versioningit"]
 build-backend = "hatchling.build"
@@ -188,5 +191,5 @@ paths = ['./src']
 # verbose = true
 
 [tool.pymarkdown]
-plugins.MD013.line_length = 100
+plugins.line-length.line_length = 100
 ignore_files = ["./docs/source/readme_link.md"]
