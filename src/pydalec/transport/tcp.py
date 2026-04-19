@@ -1,5 +1,6 @@
 """Synchronous Telnet transport used by the DALEC client."""
 
+import queue
 import threading
 from collections import deque
 from typing import Union
@@ -38,7 +39,7 @@ class TCPTransport(BaseTransport):
     def _setup_background_reader(self) -> None:
         self.measurement_log: deque[Measurement] = deque(maxlen=self._measurement_log_size)
         self._measurement_log_lock = threading.Lock()
-        self._responses: list[str | None] = []
+        self._responses: queue.Queue[str | None] = queue.Queue()
         self._reader_thread = threading.Thread(target=self._read_incoming_data, daemon=True)
         self._reader_thread.start()
 
@@ -57,13 +58,13 @@ class TCPTransport(BaseTransport):
 
     def send(self, data: str) -> None:
         """Send a single command line to the instrument."""
-        self._responses.clear()
+        self._responses.empty()
         self._connection.write(data + '\r\n')
         self._connection.flush()
 
-    def _get_reply(self) -> Union[str | None]:
+    def _get_reply(self) -> Union[str, None]:
         """Return the oldest response from the instrument."""
-        return self._responses.pop(0) if self._responses else None
+        return self._responses.get() if self._responses.qsize() > 0 else None
 
     def disconnect(self) -> None:
         """Close the telnet connection and stop the background reader."""
@@ -112,7 +113,7 @@ class TCPTransport(BaseTransport):
         try:
             measurement = Measurement.from_raw_data(message)
         except (ValidationError, ValueError):
-            self._responses.append(message)
+            self._responses.put(message)
             return
 
         with self._measurement_log_lock:

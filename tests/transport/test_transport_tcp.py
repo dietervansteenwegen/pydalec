@@ -163,7 +163,6 @@ def test_tcp_transport_receive_returns_empty_string_after_eof_on_all_calls(monke
         lambda _host, _port, **_kwargs: fake_connection,
     )
     transport = TCPTransport('localhost', 9999)
-
     assert transport._get_reply() is None
     assert transport._get_reply() is None
 
