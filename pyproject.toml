@@ -191,5 +191,5 @@ paths = ['./src']
 # verbose = true
 
 [tool.pymarkdown]
-plugins.line-length.line_length = 100
 ignore_files = ["./docs/source/readme_link.md"]
+plugins.line-length.line_length = 100
