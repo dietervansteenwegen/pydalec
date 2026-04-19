@@ -152,7 +152,7 @@ def test_tcp_transport_receive_decodes_and_strips(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.get_reply() == 'VALUE'
+    assert transport._get_reply() == 'VALUE'
 
 
 def test_tcp_transport_receive_returns_empty_string_after_eof_on_all_calls(monkeypatch):
@@ -164,8 +164,8 @@ def test_tcp_transport_receive_returns_empty_string_after_eof_on_all_calls(monke
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.get_reply() is None
-    assert transport.get_reply() is None
+    assert transport._get_reply() is None
+    assert transport._get_reply() is None
 
 
 def test_tcp_transport_reader_stops_on_empty_raw_message(monkeypatch):
@@ -177,8 +177,8 @@ def test_tcp_transport_reader_stops_on_empty_raw_message(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.get_reply() is None
-    assert transport.get_reply() is None
+    assert transport._get_reply() is None
+    assert transport._get_reply() is None
 
 
 def test_tcp_transport_reader_decodes_bytes_messages(monkeypatch):
@@ -190,7 +190,7 @@ def test_tcp_transport_reader_decodes_bytes_messages(monkeypatch):
     )
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.get_reply() == 'VALUE'
+    assert transport._get_reply() == 'VALUE'
 
 
 def test_tcp_transport_logs_unsolicited_measurements(monkeypatch):
@@ -203,7 +203,7 @@ def test_tcp_transport_logs_unsolicited_measurements(monkeypatch):
 
     transport = TCPTransport('localhost', 9999)
 
-    assert transport.get_reply() == 'OK'
+    assert transport._get_reply() == 'OK'
     assert len(transport.measurement_log) == 1
     assert transport.measurement_log[0].serial_number == '0001'
 

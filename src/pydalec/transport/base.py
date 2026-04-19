@@ -13,6 +13,11 @@ class BaseTransport(ABC):
     _connected: bool
 
     @abstractmethod
+    def connect(self) -> None:
+        """Establish a connection to the transport backend."""
+        pass
+
+    @abstractmethod
     def send(self, data: str) -> None:
         """Send a command string to the transport backend."""
         pass

@@ -61,7 +61,7 @@ class TCPTransport(BaseTransport):
         self._connection.write(data + '\r\n')
         self._connection.flush()
 
-    def get_reply(self) -> Union[str | None]:
+    def _get_reply(self) -> Union[str | None]:
         """Return the oldest response from the instrument."""
         return self._responses.pop(0) if self._responses else None
 

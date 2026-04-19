@@ -7,6 +7,7 @@ from pydalec.transport.base import BaseTransport
 
 def test_base_transport_methods_are_abstract():
     """Verify abstract markers are present on BaseTransport methods."""
+    assert BaseTransport.__dict__['connect'].__isabstractmethod__ is True
     assert BaseTransport.__dict__['send'].__isabstractmethod__ is True
     assert BaseTransport.__dict__['disconnect'].__isabstractmethod__ is True
     assert BaseTransport.__dict__['start_measurements'].__isabstractmethod__ is True
@@ -27,6 +28,9 @@ def test_base_transport_abstract_method_bodies_are_executable_via_super():
     """Execute BaseTransport method bodies to cover their `pass` statements."""
 
     class ConcreteTransport(BaseTransport):
+        def connect(self) -> None:
+            return super().connect()
+
         def send(self, data: str) -> None:
             return super().send(data)
 
@@ -41,6 +45,7 @@ def test_base_transport_abstract_method_bodies_are_executable_via_super():
 
     transport = ConcreteTransport()
 
+    assert transport.connect() is None
     assert transport.send('PING') is None
     assert transport.disconnect() is None
     assert transport.start_measurements() is None

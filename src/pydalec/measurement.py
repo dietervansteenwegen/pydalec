@@ -127,8 +127,9 @@ class Telemetry(BaseModel):
     @classmethod
     def _validate_temp_precision(cls, value: float) -> float:
         if not _has_max_decimals(value, decimals=3):
-            err_msg: str = 'temperature_diode_celsius must have at most 3 decimal '
-            f'places (value: {value})'
+            err_msg: str = (
+                f'temperature_diode_celsius must have at most 3 decimal places (value: {value})'
+            )
             raise ValueError(err_msg)
         return value
 
