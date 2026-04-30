@@ -115,17 +115,7 @@ def test_tcp_transport_init_uses_telnet_connection(monkeypatch):
     assert recorded['host'] == 'localhost'
     assert recorded['port'] == 9999
     assert recorded['kwargs'] == {'connect_minwait': 0.0, 'encoding': 'utf8'}
-
-
-def test_tcp_transport_init_rejects_invalid_measurement_log_size():
-    """Verify the measurement log size must be positive."""
-    try:
-        TCPTransport('localhost', 9999, measurement_log_size=0)
-    except ValueError as exc:
-        assert 'measurement_log_size' in str(exc)
-    else:
-        err_msg = 'Expected ValueError for measurement_log_size=0'
-        raise AssertionError(err_msg)
+    assert transport.measurement_log.maxlen == 40
 
 
 def test_tcp_transport_send_appends_newline_and_encodes(monkeypatch):
@@ -221,8 +211,9 @@ def test_tcp_transport_keeps_only_last_measurement_records(monkeypatch):
         lambda _host, _port, **_kwargs: fake_connection,
     )
 
-    transport = TCPTransport('localhost', 9999, measurement_log_size=2)
+    transport = TCPTransport('localhost', 9999)
     transport._reader_thread.join(timeout=1)
+    transport.set_measurement_log_size(2)
 
     assert [measurement.serial_number for measurement in transport.measurement_log] == [
         '0002',
@@ -254,7 +245,8 @@ def test_tcp_transport_resize_measurement_log_keeps_existing_records(monkeypatch
         'pydalec.transport.tcp.TelnetConnection',
         lambda _host, _port, **_kwargs: fake_connection,
     )
-    transport = TCPTransport('localhost', 9999, measurement_log_size=2)
+    transport = TCPTransport('localhost', 9999)
+    transport.set_measurement_log_size(2)
 
     transport._handle_incoming_data(_measurement_payload('0001').strip())
     transport._handle_incoming_data(_measurement_payload('0002').strip())
@@ -274,7 +266,8 @@ def test_tcp_transport_resize_measurement_log_drops_oldest_on_shrink(monkeypatch
         'pydalec.transport.tcp.TelnetConnection',
         lambda _host, _port, **_kwargs: fake_connection,
     )
-    transport = TCPTransport('localhost', 9999, measurement_log_size=4)
+    transport = TCPTransport('localhost', 9999)
+    transport.set_measurement_log_size(4)
 
     transport._handle_incoming_data(_measurement_payload('0001').strip())
     transport._handle_incoming_data(_measurement_payload('0002').strip())
@@ -295,7 +288,7 @@ def test_tcp_transport_resize_measurement_log_rejects_invalid_size(monkeypatch):
         'pydalec.transport.tcp.TelnetConnection',
         lambda _host, _port, **_kwargs: fake_connection,
     )
-    transport = TCPTransport('localhost', 9999, measurement_log_size=2)
+    transport = TCPTransport('localhost', 9999)
 
     try:
         transport.set_measurement_log_size(0)

@@ -1,8 +1,5 @@
 """In-memory synchronous mock transport for DALEC testing."""
 
-from collections import deque
-
-from pydalec.measurement import Measurement
 from pydalec.transport.base import BaseTransport
 
 
@@ -11,9 +8,9 @@ class MockTransport(BaseTransport):
 
     def __init__(self, delay: float = 0.0, error_rate: float = 0.0):
         """Initialize mock behavior options for delay and error simulation."""
+        super().__init__()
         self.delay = delay
         self.error_rate = error_rate
-        self.measurement_log: deque[Measurement] = deque()
         self._making_measurements = False
         self._connected = True
 

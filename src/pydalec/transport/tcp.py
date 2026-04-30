@@ -1,6 +1,5 @@
 """Synchronous Telnet transport used by the DALEC client."""
 
-import queue
 import threading
 from collections import deque
 from typing import Union
@@ -16,13 +15,13 @@ from pydalec.transport.base import BaseTransport
 class TCPTransport(BaseTransport):
     """Telnet-based synchronous transport for DALEC commands."""
 
-    def __init__(self, host: str, port: int = 23, measurement_log_size: int = 20):
+    def __init__(self, host: str, port: int = 23):
         """Connect to a DALEC endpoint over Telnet."""
-        if measurement_log_size < 1:
-            err_msg = 'measurement_log_size must be at least 1'
-            raise ValueError(err_msg)
+        super().__init__()
         self._connected = False
         self._connection = TelnetConnection(host, port, connect_minwait=0.0, encoding='utf8')
+        self._host: str = host
+        self._port: int = port
         try:
             self.connect()
         except ConnectionRefusedError as e:
@@ -31,40 +30,31 @@ class TCPTransport(BaseTransport):
             raise DalecConnectionError(err_msg) from e
         else:
             self._connected = True
-            self._host: str = host
-            self._port: int = port
-            self._measurement_log_size: int = measurement_log_size
             self._setup_background_reader()
 
     def _setup_background_reader(self) -> None:
-        self.measurement_log: deque[Measurement] = deque(maxlen=self._measurement_log_size)
         self._measurement_log_lock = threading.Lock()
-        self._responses: queue.Queue[str | None] = queue.Queue()
+        self._responses: deque[str | None] = deque()
+        self._responses_lock = threading.Lock()
         self._reader_thread = threading.Thread(target=self._read_incoming_data, daemon=True)
         self._reader_thread.start()
 
     def set_measurement_log_size(self, size: int) -> None:
-        """Resize the measurement log while preserving existing records.
-
-        When increasing the size, all current records are retained. When
-        decreasing, the oldest records are discarded first.
-        """
-        if size < 1:
-            err_msg = 'size must be at least 1'
-            raise ValueError(err_msg)
-        self._measurement_log_size = size
+        """Resize measurement log while holding the measurement lock."""
         with self._measurement_log_lock:
-            self.measurement_log = deque(self.measurement_log, maxlen=size)
+            super().set_measurement_log_size(size)
 
     def send(self, data: str) -> None:
         """Send a single command line to the instrument."""
-        self._responses.empty()
+        with self._responses_lock:
+            self._responses.clear()
         self._connection.write(data + '\r\n')
         self._connection.flush()
 
     def _get_reply(self) -> Union[str, None]:
         """Return the oldest response from the instrument."""
-        return self._responses.get() if self._responses.qsize() > 0 else None
+        with self._responses_lock:
+            return self._responses.popleft() if self._responses else None
 
     def disconnect(self) -> None:
         """Close the telnet connection and stop the background reader."""
@@ -113,7 +103,8 @@ class TCPTransport(BaseTransport):
         try:
             measurement = Measurement.from_raw_data(message)
         except (ValidationError, ValueError):
-            self._responses.put(message)
+            with self._responses_lock:
+                self._responses.append(message)
             return
 
         with self._measurement_log_lock:

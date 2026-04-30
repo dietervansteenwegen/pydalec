@@ -12,6 +12,17 @@ class BaseTransport(ABC):
     measurement_log: deque[Measurement]
     _connected: bool
 
+    def __init__(self) -> None:
+        """Initialize shared transport state."""
+        self.measurement_log = deque(maxlen=40)
+
+    def set_measurement_log_size(self, size: int) -> None:
+        """Resize measurement log while preserving the newest possible records."""
+        if size < 1:
+            err_msg = 'size must be at least 1'
+            raise ValueError(err_msg)
+        self.measurement_log = deque(self.measurement_log, maxlen=size)
+
     @property
     def connected(self) -> bool:
         """Return True if the transport is currently connected.
