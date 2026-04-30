@@ -10,7 +10,6 @@ class DalecStatus:
     def __init__(self):
         """Initialize the status with default values."""
         self.measuring: bool = False
-        self._connected: bool = True
 
 
 class Dalec:
@@ -34,18 +33,16 @@ class Dalec:
     def disconnect(self) -> None:
         """Close the transport connection."""
         self.transport.disconnect()
-        self.status._connected = False
 
     @property
     def connected(self) -> bool:
         """Return True if the client is currently connected to the instrument."""
-        return self.status._connected
+        return self.transport.connected
 
     def connect(self) -> None:
         """Reconnect to the instrument if currently disconnected."""
         if not self.connected:
             self.transport.connect()
-            self.status._connected = True
 
     @property
     def measurement_log(self):

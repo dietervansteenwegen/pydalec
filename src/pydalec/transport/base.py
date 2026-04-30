@@ -12,6 +12,14 @@ class BaseTransport(ABC):
     measurement_log: deque[Measurement]
     _connected: bool
 
+    @property
+    def connected(self) -> bool:
+        """Return True if the transport is currently connected.
+
+        This is the single source of truth for connection state.
+        """
+        return self._connected
+
     @abstractmethod
     def connect(self) -> None:
         """Establish a connection to the transport backend."""

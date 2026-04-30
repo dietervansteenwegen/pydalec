@@ -18,7 +18,7 @@ def test_mock_transport_send_strips_command():
 
 
 def test_mock_transport_disconnect_is_noop():
-    """Verify disconnect method sets _connected to False."""
+    """Verify disconnect method leaves the transport in a disconnected state."""
     transport = MockTransport()
     transport.disconnect()
-    assert transport._connected is False
+    assert transport.connected is False

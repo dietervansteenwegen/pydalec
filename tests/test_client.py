@@ -9,6 +9,11 @@ class _DummyTransport:
     def __init__(self, response='25.00'):
         self.commands = []
         self.response = response
+        self._connected = True
+
+    @property
+    def connected(self):
+        return self._connected
 
     def send(self, data):
         self.commands.append(data)
@@ -85,3 +90,67 @@ def test_dalec_str_includes_transport_string():
     client = Dalec(_StringyTransport())
 
     assert str(client) == 'DALEC at tcp://127.0.0.1:23'
+
+
+class _ConnectableTransport:
+    """Minimal fake transport that supports connect/disconnect state changes."""
+
+    def __init__(self, initially_connected=True):
+        self._connected = initially_connected
+        self.connect_calls = 0
+        self.disconnect_calls = 0
+
+    @property
+    def connected(self):
+        return self._connected
+
+    def connect(self):
+        self._connected = True
+        self.connect_calls += 1
+
+    def disconnect(self):
+        self._connected = False
+        self.disconnect_calls += 1
+
+
+def test_dalec_connected_reads_from_transport():
+    """Verify connected property reflects transport state, not a cached copy."""
+    transport = _ConnectableTransport(initially_connected=False)
+    client = Dalec(transport)
+    assert client.connected is False
+
+    transport._connected = True
+    assert client.connected is True
+
+
+def test_dalec_disconnect_delegates_to_transport():
+    """Verify disconnect() calls through to the transport and connected becomes False."""
+    transport = _ConnectableTransport(initially_connected=True)
+    client = Dalec(transport)
+
+    client.disconnect()
+
+    assert transport.disconnect_calls == 1
+    assert client.connected is False
+
+
+def test_dalec_connect_when_disconnected_calls_transport():
+    """Verify connect() calls transport.connect() when currently disconnected."""
+    transport = _ConnectableTransport(initially_connected=False)
+    client = Dalec(transport)
+
+    client.connect()
+
+    assert transport.connect_calls == 1
+    assert client.connected is True
+
+
+def test_dalec_connect_when_already_connected_is_noop():
+    """Verify connect() does not call transport.connect() when already connected."""
+    transport = _ConnectableTransport(initially_connected=True)
+    client = Dalec(transport)
+
+    client.connect()
+
+    assert transport.connect_calls == 0
+    assert client.connected is True

@@ -8,6 +8,8 @@
 
 ### Changed
 
+- fix: `Transport.connected` is single source of truth for connection state
+
 ### Fixed
 
 ### Removed
