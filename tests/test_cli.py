@@ -64,6 +64,9 @@ class _FakeClient:
     def get_location(self):
         return Location(lat=self._measurement.location.lat, lon=self._measurement.location.lon)
 
+    def get_solar_zenith(self):
+        return self._measurement.solar_zenith_deg
+
 
 def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
     measurement = _make_measurement()
@@ -89,6 +92,7 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
     assert exit_code == 0
     assert recorded == {'ip': '10.0.0.5', 'port': 9999}
     assert 'Connected to DALEC at 10.0.0.5:9999' in stdout
+    assert 'Current sun zenith: 45.0 deg' in stdout
     assert 'Started measurements. Press Ctrl+C to stop.' in stdout
     assert str(measurement) in stdout
     assert 'Stopping measurement stream...' in stdout

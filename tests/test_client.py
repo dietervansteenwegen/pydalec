@@ -5,7 +5,7 @@ from collections import deque
 
 import pytest
 
-from pydalec.errors import PyDalecNoPositionDataError
+from pydalec.errors import PyDalecNoPositionDataError, PyDalecNoSolarZenithDataError
 from pydalec.instrument import Dalec
 
 
@@ -169,8 +169,9 @@ class _FakeLocation:
 
 
 class _FakeMeasurement:
-    def __init__(self, lat, lon):
+    def __init__(self, lat, lon, solar_zenith_deg=float('nan')):
         self.location = _FakeLocation(lat, lon)
+        self.solar_zenith_deg = solar_zenith_deg
 
 
 class _LocationTransport:
@@ -277,3 +278,90 @@ def test_has_valid_position_fix_rejects_nan_values():
 
     assert Dalec._has_valid_position_fix(measurement) is False
     assert math.isnan(measurement.location.lat)
+
+
+class _TemporarySolarZenithTransport(_LocationTransport):
+    def start_measurements(self):
+        super().start_measurements()
+        self.measurement_log.clear()
+        self.measurement_log.append(_FakeMeasurement(float('nan'), float('nan'), float('nan')))
+        self.measurement_log.append(_FakeMeasurement(0.0, 0.0, 123.4))
+
+
+class _TemporaryFirstSolarZenithTransport(_LocationTransport):
+    def start_measurements(self):
+        super().start_measurements()
+        self.measurement_log.clear()
+        self.measurement_log.append(_FakeMeasurement(0.0, 0.0, 222.2))
+
+
+def test_get_solar_zenith_uses_existing_measurements_when_already_measuring():
+    transport = _LocationTransport(
+        measurement_log=[
+            _FakeMeasurement(float('nan'), float('nan'), float('nan')),
+            _FakeMeasurement(10.0, 20.0, 111.1),
+        ]
+    )
+    client = Dalec(transport)
+    client.status.measuring = True
+
+    solar_zenith = client.get_solar_zenith(timeout_secs=0.1)
+
+    assert solar_zenith == 111.1
+    assert transport.start_calls == 0
+    assert transport.stop_calls == 0
+
+
+def test_get_solar_zenith_temporarily_measures_and_restores_log_state():
+    original_measurement = _FakeMeasurement(1.0, 2.0, 77.7)
+    transport = _TemporarySolarZenithTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    solar_zenith = client.get_solar_zenith(timeout_secs=0.2)
+
+    assert solar_zenith == 123.4
+    assert transport.start_calls == 1
+    assert transport.stop_calls == 1
+    assert list(transport.measurement_log) == [original_measurement]
+    assert client.status.measuring is False
+
+
+def test_get_solar_zenith_returns_first_value_after_temporary_start():
+    original_measurement = _FakeMeasurement(float('nan'), float('nan'), float('nan'))
+    transport = _TemporaryFirstSolarZenithTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    solar_zenith = client.get_solar_zenith(timeout_secs=0.2)
+
+    assert solar_zenith == 222.2
+
+
+def test_get_solar_zenith_timeout_raises_and_restores_state():
+    original_measurement = _FakeMeasurement(float('nan'), float('nan'), float('nan'))
+    transport = _LocationTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    with pytest.raises(PyDalecNoSolarZenithDataError):
+        client.get_solar_zenith(timeout_secs=0.05)
+
+    assert transport.start_calls == 1
+    assert transport.stop_calls == 1
+    assert list(transport.measurement_log) == [original_measurement]
+    assert client.status.measuring is False
+
+
+def test_get_solar_zenith_rejects_non_positive_timeout():
+    transport = _LocationTransport()
+    client = Dalec(transport)
+
+    with pytest.raises(ValueError, match='timeout'):
+        client.get_solar_zenith(timeout_secs=0.0)
+
+
+def test_has_valid_solar_zenith_rejects_nan_values():
+    measurement = _FakeMeasurement(float('nan'), 10.0, float('nan'))
+
+    assert Dalec._has_valid_solar_zenith(measurement) is False

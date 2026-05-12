@@ -8,3 +8,7 @@ class PyDalecConnectionError(PyDalecError):
 
 class PyDalecNoPositionDataError(PyDalecError):
     """Raised when no valid GNSS position is received before timeout."""
+
+
+class PyDalecNoSolarZenithDataError(PyDalecError):
+    """Raised when no valid solar zenith is received before timeout."""

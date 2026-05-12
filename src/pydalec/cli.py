@@ -7,7 +7,11 @@ import sys
 import time
 from collections.abc import Sequence
 
-from pydalec.errors import PyDalecConnectionError, PyDalecNoPositionDataError
+from pydalec.errors import (
+    PyDalecConnectionError,
+    PyDalecNoPositionDataError,
+    PyDalecNoSolarZenithDataError,
+)
 from pydalec.instrument import Dalec, Location
 
 
@@ -59,11 +63,15 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     print(f'Connected to DALEC at {args.ip}:{args.port}')
 
-    location: Location = client.get_location()
     try:
+        location: Location = client.get_location()
+        solar_zenith_deg: float = client.get_solar_zenith()
         print(f'Current location: {location}')
+        print(f'Current sun zenith: {solar_zenith_deg} deg')
     except PyDalecNoPositionDataError:
-        print('ERROR: No position data available')
+        print('ERROR: No location data available')
+    except PyDalecNoSolarZenithDataError:
+        print('ERROR: No sun zenith data available')
 
     _ = input('Press Enter to start streaming measurements...')
 

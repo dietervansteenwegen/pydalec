@@ -6,8 +6,12 @@ import math
 import time
 from collections import deque
 from dataclasses import dataclass
+from typing import Any, Callable, TypeVar
 
-from pydalec.errors import PyDalecNoPositionDataError
+from pydalec.errors import (
+    PyDalecNoPositionDataError,
+    PyDalecNoSolarZenithDataError,
+)
 from pydalec.transport.mock import MockTransport
 from pydalec.transport.tcp import TCPTransport
 
@@ -116,8 +120,23 @@ class Dalec:
         lon = getattr(location, 'lon', float('nan'))
         return not (math.isnan(lat) or math.isnan(lon))
 
-    def get_location(self, timeout_secs: float = 10.0) -> Location:
-        """Return the first valid GNSS position fix received within timeout."""
+    @staticmethod
+    def _has_valid_solar_zenith(measurement) -> bool:
+        """Return True if measurement carries a non-NaN solar zenith."""
+        solar_zenith = getattr(measurement, 'solar_zenith_deg', float('nan'))
+        return not math.isnan(solar_zenith)
+
+    T = TypeVar('T')
+
+    def _get_measurement_value(
+        self,
+        timeout_secs: float,
+        is_valid: Callable[[Any], bool],
+        extract_value: Callable[[Any], T],
+        timeout_error_type: type[Exception],
+        timeout_error_template: str,
+    ) -> T:
+        """Poll measurements until a valid value is available or timeout expires."""
         if timeout_secs <= 0:
             err_msg = 'timeout must be greater than 0 seconds'
             raise ValueError(err_msg)
@@ -146,8 +165,8 @@ class Dalec:
                         new_measurements = measurements
 
                 for measurement in new_measurements:
-                    if self._has_valid_position_fix(measurement):
-                        return Location(lat=measurement.location.lat, lon=measurement.location.lon)
+                    if is_valid(measurement):
+                        return extract_value(measurement)
                     last_seen_measurement = measurement
 
                 time.sleep(0.05)
@@ -158,5 +177,28 @@ class Dalec:
                 finally:
                     self.transport.measurement_log = deque(saved_log, maxlen=saved_log.maxlen)
 
-        err_msg = f'No valid GNSS position fix received within {timeout_secs:.1f}s'
-        raise PyDalecNoPositionDataError(err_msg)
+        err_msg = timeout_error_template.format(timeout_secs=timeout_secs)
+        raise timeout_error_type(err_msg)
+
+    def get_location(self, timeout_secs: float = 10.0) -> Location:
+        """Return the first valid GNSS position fix received within timeout."""
+        return self._get_measurement_value(
+            timeout_secs=timeout_secs,
+            is_valid=self._has_valid_position_fix,
+            extract_value=lambda measurement: Location(
+                lat=measurement.location.lat,
+                lon=measurement.location.lon,
+            ),
+            timeout_error_type=PyDalecNoPositionDataError,
+            timeout_error_template='No valid GNSS position fix received within {timeout_secs:.1f}s',
+        )
+
+    def get_solar_zenith(self, timeout_secs: float = 10.0) -> float:
+        """Return the first valid solar zenith received within timeout."""
+        return self._get_measurement_value(
+            timeout_secs=timeout_secs,
+            is_valid=self._has_valid_solar_zenith,
+            extract_value=lambda measurement: measurement.solar_zenith_deg,
+            timeout_error_type=PyDalecNoSolarZenithDataError,
+            timeout_error_template='No valid solar zenith received within {timeout_secs:.1f}s',
+        )

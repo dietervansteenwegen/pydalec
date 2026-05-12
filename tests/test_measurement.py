@@ -389,3 +389,17 @@ class TestMeasurement:
         restored = Measurement.from_raw_data(raw_data)
 
         assert math.isnan(restored.sat_compass_heading)
+
+    def test_measurement_str_is_multiline_and_includes_core_fields(self):
+        measurement = Measurement(**_valid_measurement(serial_number='0011'))
+
+        rendered = str(measurement)
+
+        assert "device_id='DALEC'," in rendered
+        assert "serial_number='0011'," in rendered
+        assert "channel_type='Ed'," in rendered
+        assert 'utc_time=datetime.datetime(' in rendered
+        assert 'location=Coordinates(' in rendered
+        assert 'solar_azimuth_deg=90.0, solar_zenith_deg=45.0,' in rendered
+        assert 'telemetry=Telemetry(' in rendered
+        assert rendered.endswith('spectrum=[' + ', '.join(['1000'] * 190) + ']')

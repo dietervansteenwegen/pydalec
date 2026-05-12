@@ -215,6 +215,36 @@ class Measurement(BaseModel):
     def _validate_signal_percentage(cls, value: float) -> float:
         return _validate_range_or_nan(value, 0.0, 100.0, 'signal_percentage')
 
+    def __str__(self) -> str:
+        """Human-readable multiline string representation of a measurement."""
+        spectrum_values = ', '.join(str(value) for value in self.spectrum)
+        return (
+            f'device_id={self.device_id!r},\n'
+            f'serial_number={self.serial_number!r},\n'
+            f'channel_type={self.channel_type!r},\n'
+            f'utc_time={self.utc_time!r},\n'
+            f'location={self.location!r},\n'
+            f'sat_compass_heading={self.sat_compass_heading},\n'
+            f'solar_azimuth_deg={self.solar_azimuth_deg}, '
+            f'solar_zenith_deg={self.solar_zenith_deg},\n'
+            f'gear_position_deg={self.gear_position_deg},\n'
+            f'azimuth_deg={self.azimuth_deg}, relative_azimuth_deg={self.relative_azimuth_deg},\n'
+            'pitch_start_measurement_deg='
+            f'{self.pitch_start_measurement_deg}, '
+            f'roll_start_measurement_deg={self.roll_start_measurement_deg},\n'
+            'telemetry=Telemetry(\n'
+            f'\tvoltage_volts={self.telemetry.voltage_volts},\n'
+            f'\thumidity_mm_hg={self.telemetry.humidity_mm_hg},\n'
+            f'\ttemperature_diode_celsius={self.telemetry.temperature_diode_celsius},\n'
+            f'\tstatus_flag={self.telemetry.status_flag},\n'
+            '),\n'
+            f'int_time={self.int_time},\n'
+            f'signal_percentage={self.signal_percentage},\n'
+            f'dark_counts={self.dark_counts},\n'
+            f'max_counts={self.max_counts},\n'
+            f'spectrum=[{spectrum_values}]'
+        )
+
     @classmethod
     def from_raw_data(cls, raw_data: str) -> Self:
         """Factory method from string to Measurement model."""
