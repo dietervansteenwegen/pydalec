@@ -1,6 +1,10 @@
 class PyDalecError(Exception):
-    """Base class for all PyDalec exceptions."""
+    """Base class for all DALEC client exceptions."""
 
 
-class DalecConnectionError(PyDalecError):
+class PyDalecConnectionError(PyDalecError):
     """Raised when a connection to the DALEC cannot be established."""
+
+
+class PyDalecNoPositionDataError(PyDalecError):
+    """Raised when no valid GNSS position is received before timeout."""

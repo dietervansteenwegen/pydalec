@@ -7,7 +7,7 @@ from typing import Union
 from pydantic import ValidationError
 from telnetlib3.sync import TelnetConnection
 
-from pydalec.errors import DalecConnectionError
+from pydalec.errors import PyDalecConnectionError
 from pydalec.measurement import Measurement
 from pydalec.transport.base import BaseTransport
 
@@ -27,7 +27,7 @@ class TCPTransport(BaseTransport):
         except ConnectionRefusedError as e:
             self._connected = False
             err_msg = f'Unable to connect to DALEC at {host}:{port}'
-            raise DalecConnectionError(err_msg) from e
+            raise PyDalecConnectionError(err_msg) from e
         else:
             self._connected = True
             self._setup_background_reader()
@@ -77,7 +77,7 @@ class TCPTransport(BaseTransport):
                     f'Unable to connect to DALEC at {self._host}:{self._port}. '
                     'Check instrument power/connection and that DALECview is not connected.'
                 )
-                raise DalecConnectionError(err_msg) from None
+                raise PyDalecConnectionError(err_msg) from None
             else:
                 self._connected = True
 
@@ -112,7 +112,8 @@ class TCPTransport(BaseTransport):
 
     def start_measurements(self) -> None:
         """Send command to start making measurements."""
-        self.measurement_log.clear()
+        with self._measurement_log_lock:
+            self.measurement_log.clear()
         self._connection.write('START\r\n')
         self._connection.flush()
 

@@ -1,5 +1,13 @@
 """Synchronous client for communicating with a DALEC instrument."""
 
+from __future__ import annotations
+
+import math
+import time
+from collections import deque
+from dataclasses import dataclass
+
+from pydalec.errors import PyDalecNoPositionDataError
 from pydalec.transport.mock import MockTransport
 from pydalec.transport.tcp import TCPTransport
 
@@ -10,6 +18,14 @@ class DalecStatus:
     def __init__(self):
         """Initialize the status with default values."""
         self.measuring: bool = False
+
+
+@dataclass(frozen=True)
+class Location:
+    """Simple latitude/longitude position fix."""
+
+    lat: float
+    lon: float
 
 
 class Dalec:
@@ -74,3 +90,59 @@ class Dalec:
         """Stop the background process for making and receiving measurements."""
         self.transport.stop_measurements()
         self.status.measuring = False
+
+    @staticmethod
+    def _has_valid_position_fix(measurement) -> bool:
+        """Return True if measurement carries a non-NaN GNSS position."""
+        location = getattr(measurement, 'location', None)
+        if location is None:
+            return False
+
+        lat = getattr(location, 'lat', float('nan'))
+        lon = getattr(location, 'lon', float('nan'))
+        return not (math.isnan(lat) or math.isnan(lon))
+
+    def get_location(self, timeout: float = 10.0) -> Location:
+        """Return the first valid GNSS position fix received within timeout."""
+        if timeout <= 0:
+            err_msg = 'timeout must be greater than 0 seconds'
+            raise ValueError(err_msg)
+
+        was_measuring: bool = self.status.measuring
+        saved_log = deque(
+            self.transport.measurement_log, maxlen=self.transport.measurement_log.maxlen
+        )
+        last_seen_measurement = None
+
+        if not was_measuring:
+            self.start_measurements()
+
+        deadline = time.monotonic() + timeout
+        try:
+            while time.monotonic() < deadline:
+                measurements = list(self.transport.measurement_log)
+
+                if last_seen_measurement is None:
+                    new_measurements = measurements
+                else:
+                    try:
+                        last_index = measurements.index(last_seen_measurement)
+                        new_measurements = measurements[last_index + 1 :]
+                    except ValueError:
+                        new_measurements = measurements
+
+                for measurement in new_measurements:
+                    if self._has_valid_position_fix(measurement):
+                        return Location(lat=measurement.location.lat, lon=measurement.location.lon)
+                    last_seen_measurement = measurement
+
+                time.sleep(0.05)
+        finally:
+            if not was_measuring:
+                try:
+                    self.stop_measurements()
+                finally:
+                    self.transport.measurement_log = deque(saved_log, maxlen=saved_log.maxlen)
+
+        err_msg = f'No valid GNSS position fix received within {timeout:.1f}s'
+        raise PyDalecNoPositionDataError(err_msg)

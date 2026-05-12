@@ -7,7 +7,7 @@ import sys
 import time
 from collections.abc import Sequence
 
-from pydalec.errors import DalecConnectionError
+from pydalec.errors import PyDalecConnectionError
 from pydalec.instrument import Dalec
 
 
@@ -53,7 +53,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         client = Dalec.connect_tcp(args.ip, args.port)
-    except DalecConnectionError as exc:
+    except PyDalecConnectionError as exc:
         print(f'Connection failed: {exc}', file=sys.stderr)
         return 1
 

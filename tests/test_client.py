@@ -1,5 +1,11 @@
 """Unit tests for `pydalec.instrument`."""
 
+import math
+from collections import deque
+
+import pytest
+
+from pydalec.errors import PyDalecNoPositionDataError
 from pydalec.instrument import Dalec
 
 
@@ -154,3 +160,120 @@ def test_dalec_connect_when_already_connected_is_noop():
 
     assert transport.connect_calls == 0
     assert client.connected is True
+
+
+class _FakeLocation:
+    def __init__(self, lat, lon):
+        self.lat = lat
+        self.lon = lon
+
+
+class _FakeMeasurement:
+    def __init__(self, lat, lon):
+        self.location = _FakeLocation(lat, lon)
+
+
+class _LocationTransport:
+    def __init__(self, measurement_log=None):
+        self.measurement_log = deque(measurement_log or [], maxlen=40)
+        self.start_calls = 0
+        self.stop_calls = 0
+        self._connected = True
+
+    @property
+    def connected(self):
+        return self._connected
+
+    def start_measurements(self):
+        self.start_calls += 1
+
+    def stop_measurements(self):
+        self.stop_calls += 1
+
+
+class _TemporaryLocationTransport(_LocationTransport):
+    def start_measurements(self):
+        super().start_measurements()
+        self.measurement_log.clear()
+        self.measurement_log.append(_FakeMeasurement(float('nan'), float('nan')))
+        self.measurement_log.append(_FakeMeasurement(51.1234, 4.5678))
+
+
+class _TemporaryFirstFixTransport(_LocationTransport):
+    def start_measurements(self):
+        super().start_measurements()
+        self.measurement_log.clear()
+        self.measurement_log.append(_FakeMeasurement(12.34, 56.78))
+
+
+def test_get_location_uses_existing_measurements_when_already_measuring():
+    transport = _LocationTransport(
+        measurement_log=[_FakeMeasurement(float('nan'), float('nan')), _FakeMeasurement(10.0, 20.0)]
+    )
+    client = Dalec(transport)
+    client.status.measuring = True
+
+    location = client.get_location(timeout=0.1)
+
+    assert location.lat == 10.0
+    assert location.lon == 20.0
+    assert transport.start_calls == 0
+    assert transport.stop_calls == 0
+
+
+def test_get_location_temporarily_measures_and_restores_log_state():
+    original_measurement = _FakeMeasurement(1.0, 2.0)
+    transport = _TemporaryLocationTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    location = client.get_location(timeout=0.2)
+
+    assert location.lat == 51.1234
+    assert location.lon == 4.5678
+    assert transport.start_calls == 1
+    assert transport.stop_calls == 1
+    assert list(transport.measurement_log) == [original_measurement]
+    assert client.status.measuring is False
+
+
+def test_get_location_returns_first_fix_after_temporary_start():
+    original_measurement = _FakeMeasurement(float('nan'), float('nan'))
+    transport = _TemporaryFirstFixTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    location = client.get_location(timeout=0.2)
+
+    assert location.lat == 12.34
+    assert location.lon == 56.78
+
+
+def test_get_location_timeout_raises_and_restores_state():
+    original_measurement = _FakeMeasurement(float('nan'), float('nan'))
+    transport = _LocationTransport(measurement_log=[original_measurement])
+    client = Dalec(transport)
+    client.status.measuring = False
+
+    with pytest.raises(PyDalecNoPositionDataError):
+        client.get_location(timeout=0.05)
+
+    assert transport.start_calls == 1
+    assert transport.stop_calls == 1
+    assert list(transport.measurement_log) == [original_measurement]
+    assert client.status.measuring is False
+
+
+def test_get_location_rejects_non_positive_timeout():
+    transport = _LocationTransport()
+    client = Dalec(transport)
+
+    with pytest.raises(ValueError, match='timeout'):
+        client.get_location(timeout=0.0)
+
+
+def test_has_valid_position_fix_rejects_nan_values():
+    measurement = _FakeMeasurement(float('nan'), 10.0)
+
+    assert Dalec._has_valid_position_fix(measurement) is False
+    assert math.isnan(measurement.location.lat)

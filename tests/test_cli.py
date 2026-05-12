@@ -3,7 +3,7 @@
 import datetime
 
 from pydalec.cli import main
-from pydalec.errors import DalecConnectionError
+from pydalec.errors import PyDalecConnectionError
 from pydalec.measurement import Coordinates, Measurement, StatusFlag, Telemetry
 
 UTC = datetime.timezone.utc
@@ -95,7 +95,7 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
 
 def test_cli_returns_non_zero_on_connection_error(monkeypatch, capsys):
     def fake_connect_tcp(_ip, _port):
-        raise DalecConnectionError
+        raise PyDalecConnectionError
 
     monkeypatch.setattr('pydalec.cli.Dalec.connect_tcp', fake_connect_tcp)
 
