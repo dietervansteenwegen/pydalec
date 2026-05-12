@@ -27,6 +27,20 @@ class Location:
     lat: float
     lon: float
 
+    def __str__(self) -> str:
+        """Return string representation of the class.
+
+        Returns:
+            str: representation of the class, including lat and lon values.
+        """
+        lat: str = (
+            f'{self.lat}\N{DEGREE SIGN}N' if self.lat >= 0 else f'{-self.lat}\N{DEGREE SIGN}S'
+        )
+        lon: str = (
+            f'{self.lon}\N{DEGREE SIGN}E' if self.lon >= 0 else f'{-self.lon}\N{DEGREE SIGN}W'
+        )
+        return f'Location(lat={lat}, lon={lon})'
+
 
 class Dalec:
     """Client API for synchronous DALEC commands."""
@@ -102,9 +116,9 @@ class Dalec:
         lon = getattr(location, 'lon', float('nan'))
         return not (math.isnan(lat) or math.isnan(lon))
 
-    def get_location(self, timeout: float = 10.0) -> Location:
+    def get_location(self, timeout_secs: float = 10.0) -> Location:
         """Return the first valid GNSS position fix received within timeout."""
-        if timeout <= 0:
+        if timeout_secs <= 0:
             err_msg = 'timeout must be greater than 0 seconds'
             raise ValueError(err_msg)
 
@@ -117,7 +131,7 @@ class Dalec:
         if not was_measuring:
             self.start_measurements()
 
-        deadline = time.monotonic() + timeout
+        deadline = time.monotonic() + timeout_secs
         try:
             while time.monotonic() < deadline:
                 measurements = list(self.transport.measurement_log)
@@ -144,5 +158,5 @@ class Dalec:
                 finally:
                     self.transport.measurement_log = deque(saved_log, maxlen=saved_log.maxlen)
 
-        err_msg = f'No valid GNSS position fix received within {timeout:.1f}s'
+        err_msg = f'No valid GNSS position fix received within {timeout_secs:.1f}s'
         raise PyDalecNoPositionDataError(err_msg)

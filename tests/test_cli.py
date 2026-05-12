@@ -4,6 +4,7 @@ import datetime
 
 from pydalec.cli import main
 from pydalec.errors import PyDalecConnectionError
+from pydalec.instrument import Location
 from pydalec.measurement import Coordinates, Measurement, StatusFlag, Telemetry
 
 UTC = datetime.timezone.utc
@@ -60,6 +61,9 @@ class _FakeClient:
     def disconnect(self):
         self.disconnected = True
 
+    def get_location(self):
+        return Location(lat=self._measurement.location.lat, lon=self._measurement.location.lon)
+
 
 def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
     measurement = _make_measurement()
@@ -76,6 +80,7 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
 
     monkeypatch.setattr('pydalec.cli.Dalec.connect_tcp', fake_connect_tcp)
     monkeypatch.setattr('pydalec.cli.time.sleep', fake_sleep)
+    monkeypatch.setattr('builtins.input', lambda _prompt='': '')
 
     exit_code = main(['10.0.0.5', '--port', '9999'])
 

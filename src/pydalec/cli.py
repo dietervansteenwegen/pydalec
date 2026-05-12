@@ -7,8 +7,8 @@ import sys
 import time
 from collections.abc import Sequence
 
-from pydalec.errors import PyDalecConnectionError
-from pydalec.instrument import Dalec
+from pydalec.errors import PyDalecConnectionError, PyDalecNoPositionDataError
+from pydalec.instrument import Dalec, Location
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -58,6 +58,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
 
     print(f'Connected to DALEC at {args.ip}:{args.port}')
+
+    location: Location = client.get_location()
+    try:
+        print(f'Current location: {location}')
+    except PyDalecNoPositionDataError:
+        print('ERROR: No position data available')
+
+    _ = input('Press Enter to start streaming measurements...')
 
     measurements_started = False
     exit_code = 0

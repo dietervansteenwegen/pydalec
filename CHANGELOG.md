@@ -6,6 +6,7 @@
 
 - feat: Add `pydalec-test` TCP CLI
 - feat: Add method to fetch current GNSS location
+- feat: add acquiring location to CLI test script
 
 ### Changed
 

@@ -213,7 +213,7 @@ def test_get_location_uses_existing_measurements_when_already_measuring():
     client = Dalec(transport)
     client.status.measuring = True
 
-    location = client.get_location(timeout=0.1)
+    location = client.get_location(timeout_secs=0.1)
 
     assert location.lat == 10.0
     assert location.lon == 20.0
@@ -227,7 +227,7 @@ def test_get_location_temporarily_measures_and_restores_log_state():
     client = Dalec(transport)
     client.status.measuring = False
 
-    location = client.get_location(timeout=0.2)
+    location = client.get_location(timeout_secs=0.2)
 
     assert location.lat == 51.1234
     assert location.lon == 4.5678
@@ -243,7 +243,7 @@ def test_get_location_returns_first_fix_after_temporary_start():
     client = Dalec(transport)
     client.status.measuring = False
 
-    location = client.get_location(timeout=0.2)
+    location = client.get_location(timeout_secs=0.2)
 
     assert location.lat == 12.34
     assert location.lon == 56.78
@@ -256,7 +256,7 @@ def test_get_location_timeout_raises_and_restores_state():
     client.status.measuring = False
 
     with pytest.raises(PyDalecNoPositionDataError):
-        client.get_location(timeout=0.05)
+        client.get_location(timeout_secs=0.05)
 
     assert transport.start_calls == 1
     assert transport.stop_calls == 1
@@ -269,7 +269,7 @@ def test_get_location_rejects_non_positive_timeout():
     client = Dalec(transport)
 
     with pytest.raises(ValueError, match='timeout'):
-        client.get_location(timeout=0.0)
+        client.get_location(timeout_secs=0.0)
 
 
 def test_has_valid_position_fix_rejects_nan_values():
