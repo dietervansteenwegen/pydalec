@@ -245,6 +245,26 @@ class Measurement(BaseModel):
             f'spectrum=[{spectrum_values}]'
         )
 
+    @property
+    def has_valid_position_fix(self) -> bool:
+        """Return True if location has non-NaN latitude and longitude.
+
+        This property checks whether the GNSS position fix is available.
+        A valid fix requires both lat and lon to be non-NaN values.
+        """
+        lat = getattr(self.location, 'lat', float('nan'))
+        lon = getattr(self.location, 'lon', float('nan'))
+        return not (math.isnan(lat) or math.isnan(lon))
+
+    @property
+    def has_valid_solar_zenith(self) -> bool:
+        """Return True if solar_zenith_deg is non-NaN.
+
+        This property checks whether the solar zenith angle measurement
+        is available.
+        """
+        return not math.isnan(self.solar_zenith_deg)
+
     @classmethod
     def from_raw_data(cls, raw_data: str) -> Self:
         """Factory method from string to Measurement model."""

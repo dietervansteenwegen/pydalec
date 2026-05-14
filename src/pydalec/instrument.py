@@ -109,26 +109,9 @@ class Dalec:
         self.transport.stop_measurements()
         self.status.measuring = False
 
-    @staticmethod
-    def _has_valid_position_fix(measurement) -> bool:
-        """Return True if measurement carries a non-NaN GNSS position."""
-        location = getattr(measurement, 'location', None)
-        if location is None:
-            return False
-
-        lat = getattr(location, 'lat', float('nan'))
-        lon = getattr(location, 'lon', float('nan'))
-        return not (math.isnan(lat) or math.isnan(lon))
-
-    @staticmethod
-    def _has_valid_solar_zenith(measurement) -> bool:
-        """Return True if measurement carries a non-NaN solar zenith."""
-        solar_zenith = getattr(measurement, 'solar_zenith_deg', float('nan'))
-        return not math.isnan(solar_zenith)
-
     T = TypeVar('T')
 
-    def _get_measurement_value(
+    def _get_measurement_field(
         self,
         timeout_secs: float,
         is_valid: Callable[[Any], bool],
@@ -182,9 +165,9 @@ class Dalec:
 
     def get_location(self, timeout_secs: float = 10.0) -> Location:
         """Return the first valid GNSS position fix received within timeout."""
-        return self._get_measurement_value(
+        return self._get_measurement_field(
             timeout_secs=timeout_secs,
-            is_valid=self._has_valid_position_fix,
+            is_valid=lambda measurement: measurement.has_valid_position_fix,
             extract_value=lambda measurement: Location(
                 lat=measurement.location.lat,
                 lon=measurement.location.lon,
@@ -195,9 +178,9 @@ class Dalec:
 
     def get_solar_zenith(self, timeout_secs: float = 10.0) -> float:
         """Return the first valid solar zenith received within timeout."""
-        return self._get_measurement_value(
+        return self._get_measurement_field(
             timeout_secs=timeout_secs,
-            is_valid=self._has_valid_solar_zenith,
+            is_valid=lambda measurement: measurement.has_valid_solar_zenith,
             extract_value=lambda measurement: measurement.solar_zenith_deg,
             timeout_error_type=PyDalecNoSolarZenithDataError,
             timeout_error_template='No valid solar zenith received within {timeout_secs:.1f}s',

@@ -173,6 +173,18 @@ class _FakeMeasurement:
         self.location = _FakeLocation(lat, lon)
         self.solar_zenith_deg = solar_zenith_deg
 
+    @property
+    def has_valid_position_fix(self) -> bool:
+        """Return True if location has non-NaN latitude and longitude."""
+        lat = getattr(self.location, 'lat', float('nan'))
+        lon = getattr(self.location, 'lon', float('nan'))
+        return not (math.isnan(lat) or math.isnan(lon))
+
+    @property
+    def has_valid_solar_zenith(self) -> bool:
+        """Return True if solar_zenith_deg is non-NaN."""
+        return not math.isnan(self.solar_zenith_deg)
+
 
 class _LocationTransport:
     def __init__(self, measurement_log=None):
@@ -276,7 +288,7 @@ def test_get_location_rejects_non_positive_timeout():
 def test_has_valid_position_fix_rejects_nan_values():
     measurement = _FakeMeasurement(float('nan'), 10.0)
 
-    assert Dalec._has_valid_position_fix(measurement) is False
+    assert measurement.has_valid_position_fix is False
     assert math.isnan(measurement.location.lat)
 
 
@@ -364,4 +376,4 @@ def test_get_solar_zenith_rejects_non_positive_timeout():
 def test_has_valid_solar_zenith_rejects_nan_values():
     measurement = _FakeMeasurement(float('nan'), 10.0, float('nan'))
 
-    assert Dalec._has_valid_solar_zenith(measurement) is False
+    assert measurement.has_valid_solar_zenith is False
