@@ -28,9 +28,6 @@ class TCPTransport(BaseTransport):
             self._connected = False
             err_msg = f'Unable to connect to DALEC at {host}:{port}'
             raise PyDalecConnectionError(err_msg) from e
-        else:
-            self._connected = True
-            self._setup_background_reader()
 
     def _setup_background_reader(self) -> None:
         self._measurement_log_lock = threading.Lock()
@@ -80,6 +77,7 @@ class TCPTransport(BaseTransport):
                 raise PyDalecConnectionError(err_msg) from None
             else:
                 self._connected = True
+                self._setup_background_reader()
 
     def _read_incoming_data(self) -> None:
         while True:

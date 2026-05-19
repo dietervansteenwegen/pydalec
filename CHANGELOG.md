@@ -20,4 +20,6 @@
 
 ### Fixed
 
+- fix: restart TCP reader on reconnect
+
 ### Removed
