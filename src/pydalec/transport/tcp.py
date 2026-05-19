@@ -64,6 +64,12 @@ class DataSink:
         utc_timestamp = timestamp.astimezone(datetime.timezone.utc)
         return utc_timestamp.isoformat(timespec='microseconds').replace('+00:00', 'Z')
 
+    @staticmethod
+    def _format_filename_timestamp_utc(timestamp: datetime.datetime) -> str:
+        """Return filesystem-safe ISO8601 basic UTC timestamp for filenames."""
+        utc_timestamp = timestamp.astimezone(datetime.timezone.utc)
+        return utc_timestamp.strftime('%Y%m%dT%H%M%S.%fZ')
+
     def store_line(
         self,
         stream: _LINE_STREAM_OPTIONS,
@@ -121,7 +127,7 @@ class DataSink:
 
         day_dir = self._data_root_dir / day_key
         day_dir.mkdir(parents=True, exist_ok=True)
-        timestamp_label = self._format_iso8601_utc(timestamp)
+        timestamp_label = self._format_filename_timestamp_utc(timestamp)
         file_name = f'DALEC_{timestamp_label}.{stream}'
         path = day_dir / file_name
         handle = path.open('a', encoding='utf-8', newline='')

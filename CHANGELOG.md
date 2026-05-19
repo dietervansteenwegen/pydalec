@@ -22,5 +22,6 @@
 ### Fixed
 
 - fix: restart TCP reader on reconnect
+- fix: use Windows-compliant filenames without colons
 
 ### Removed

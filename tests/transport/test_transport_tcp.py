@@ -369,8 +369,8 @@ def test_tcp_transport_persists_valid_and_invalid_lines(monkeypatch, tmp_path):
     assert transport._get_reply() == invalid_line
     assert len(raw_files) == 1
     assert len(error_files) == 1
-    assert raw_files[0].name.startswith('DALEC_2024-06-01T12:00:00.000000Z')
-    assert error_files[0].name.startswith('DALEC_2024-06-01T12:00:01.000000Z')
+    assert raw_files[0].name.startswith('DALEC_20240601T120000.000000Z')
+    assert error_files[0].name.startswith('DALEC_20240601T120001.000000Z')
     assert raw_files[0].read_text(encoding='utf-8').startswith('2024-06-01T12:00:00.000000Z ')
     assert error_files[0].read_text(encoding='utf-8').startswith('2024-06-01T12:00:01.000000Z ')
 
@@ -399,8 +399,8 @@ def test_tcp_transport_rolls_over_raw_stream_at_midnight(monkeypatch, tmp_path):
 
     assert len(day1_files) == 1
     assert len(day2_files) == 1
-    assert day1_files[0].name.startswith('DALEC_2024-06-01T23:59:59.000000Z')
-    assert day2_files[0].name.startswith('DALEC_2024-06-02T00:00:01.000000Z')
+    assert day1_files[0].name.startswith('DALEC_20240601T235959.000000Z')
+    assert day2_files[0].name.startswith('DALEC_20240602T000001.000000Z')
 
 
 def test_tcp_transport_rotates_error_stream_independently(monkeypatch, tmp_path):
