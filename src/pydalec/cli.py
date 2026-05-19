@@ -15,6 +15,10 @@ from pydalec.errors import (
 from pydalec.instrument import Dalec, Location
 
 
+class _CliArgumentError(ValueError):
+    """Raised when parsed CLI arguments violate local validation rules."""
+
+
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     """Parse CLI arguments for TCP connection and stream polling settings."""
     parser = argparse.ArgumentParser(
@@ -23,6 +27,18 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument('ip', help='Instrument IP address')
     parser.add_argument('--port', type=int, default=23, help='TCP port (default: 23)')
+    parser.add_argument(
+        '--data-root-dir',
+        type=str,
+        default=None,
+        help='Root directory where incoming data files are stored',
+    )
+    parser.add_argument(
+        '--max-file-size-kb',
+        type=int,
+        default=51200,
+        help='Maximum size in kB for each output file (default: 51200, i.e. 50 MB)',
+    )
     parser.add_argument(
         '--poll-interval',
         type=float,
@@ -51,18 +67,8 @@ def _print_new_measurements(client: Dalec, last_measurement) -> object | None:
     return measurements[-1]
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Run the CLI workflow and return a shell-style exit code."""
-    args = _parse_args(argv)
-
-    try:
-        client = Dalec.connect_tcp(args.ip, args.port)
-    except PyDalecConnectionError as exc:
-        print(f'Connection failed: {exc}', file=sys.stderr)
-        return 1
-
-    print(f'Connected to DALEC at {args.ip}:{args.port}')
-
+def print_header(client: Dalec) -> None:
+    """Print the current location and sun zenith before streaming."""
     try:
         location: Location = client.get_location()
         solar_zenith_deg: float = client.get_solar_zenith()
@@ -72,8 +78,60 @@ def main(argv: Sequence[str] | None = None) -> int:
         print('ERROR: No location data available')
     except PyDalecNoSolarZenithDataError:
         print('ERROR: No sun zenith data available')
+    else:
+        _ = input('Press Enter to start streaming measurements...')
 
-    _ = input('Press Enter to start streaming measurements...')
+
+def _get_and_check_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    """Parse CLI arguments and check for required dependencies."""
+    args = _parse_args(argv)
+    raw_argv = list(argv) if argv is not None else sys.argv[1:]
+
+    if args.data_root_dir is None and '--max-file-size-kb' in raw_argv:
+        err_msg = '--max-file-size-kb requires --data-root-dir.'
+        raise _CliArgumentError(err_msg)
+
+    return args
+
+
+def _get_args_or_exit_code(argv: Sequence[str] | None = None) -> argparse.Namespace | int:
+    """Return parsed CLI arguments or an exit code for invalid invocation."""
+    try:
+        return _get_and_check_args(argv)
+    except _CliArgumentError as exc:
+        print(exc, file=sys.stderr)
+        return 2
+    except SystemExit as exc:
+        if exc.code in (None, 0):
+            return 0
+        if isinstance(exc.code, int):
+            return exc.code
+        print(exc.code, file=sys.stderr)
+        return 2
+
+
+def run(argv: Sequence[str] | None = None) -> int:
+    """Run the CLI workflow and return a shell-style exit code."""
+    args = _get_args_or_exit_code(argv)
+    if isinstance(args, int):
+        return args
+
+    try:
+        client = Dalec.connect_tcp(
+            args.ip,
+            args.port,
+            data_root_dir=args.data_root_dir,
+            max_file_size_kb=args.max_file_size_kb,
+        )
+    except PyDalecConnectionError as exc:
+        print(f'Connection failed: {exc}', file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(f'Invalid configuration: {exc}', file=sys.stderr)
+        return 2
+
+    print(f'Connected to DALEC at {args.ip}:{args.port}')
+    print_header(client)
 
     measurements_started = False
     exit_code = 0
@@ -111,5 +169,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     return exit_code
 
 
+def main(argv: Sequence[str] | None = None) -> None:
+    """Run the CLI and exit the process with the returned status code."""
+    raise SystemExit(run(argv))
+
+
 if __name__ == '__main__':
-    raise SystemExit(main())
+    main()

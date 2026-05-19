@@ -6,9 +6,16 @@ from pydalec.transport.base import BaseTransport
 class MockTransport(BaseTransport):
     """Mock synchronous transport that simulates DALEC responses."""
 
-    def __init__(self, delay: float = 0.0, error_rate: float = 0.0):
+    def __init__(
+        self,
+        delay: float = 0.0,
+        error_rate: float = 0.0,
+        data_root_dir: str | None = None,
+        max_file_size_kb: int = 51200,
+    ):
         """Initialize mock behavior options for delay and error simulation."""
         super().__init__()
+        del data_root_dir, max_file_size_kb  # TODO: implement file handling in the mock transport
         self.delay = delay
         self.error_rate = error_rate
         self._making_measurements = False

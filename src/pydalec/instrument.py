@@ -55,14 +55,40 @@ class Dalec:
         self.status = DalecStatus()
 
     @classmethod
-    def connect_tcp(cls, host='127.0.0.1', port=23):
+    def connect_tcp(
+        cls,
+        host: str = '127.0.0.1',
+        port: int = 23,
+        data_root_dir: str | None = None,
+        max_file_size_kb: int = 51200,
+    ):
         """Create a client connected to a DALEC TCP endpoint."""
-        return cls(transport=TCPTransport(host, port))
+        return cls(
+            transport=TCPTransport(
+                host,
+                port,
+                data_root_dir=data_root_dir,
+                max_file_size_kb=max_file_size_kb,
+            )
+        )
 
     @classmethod
-    def connect_mock(cls, delay=0.0, error_rate=0.0):
+    def connect_mock(
+        cls,
+        delay: float = 0.0,
+        error_rate: float = 0.0,
+        data_root_dir: str | None = None,
+        max_file_size_kb: int = 51200,
+    ):
         """Create a client using the in-memory mock transport."""
-        return cls(MockTransport(delay, error_rate))
+        return cls(
+            MockTransport(
+                delay=delay,
+                error_rate=error_rate,
+                data_root_dir=data_root_dir,
+                max_file_size_kb=max_file_size_kb,
+            )
+        )
 
     def disconnect(self) -> None:
         """Close the transport connection."""

@@ -1,8 +1,13 @@
 """Synchronous Telnet transport used by the DALEC client."""
 
+import datetime
+import io
+import logging
 import threading
 from collections import deque
-from typing import Union
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal, Union
 
 from pydantic import ValidationError
 from telnetlib3.sync import TelnetConnection
@@ -11,14 +16,150 @@ from pydalec.errors import PyDalecConnectionError
 from pydalec.measurement import Measurement
 from pydalec.transport.base import BaseTransport
 
+_LINE_STREAM_OPTIONS = Literal['raw', 'error']
+_LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class StreamState:
+    """Track the current file handle and rollover state for one stream."""
+
+    handle: io.TextIOBase | None = None
+    path: Path | None = None
+    size_bytes: int = 0
+    day_key: str | None = None
+
+
+class DataSink:
+    """Persist incoming DALEC lines to per-day stream files."""
+
+    def __init__(
+        self,
+        data_root_dir: str | Path | None,
+        max_file_size_kb: int,
+    ):
+        """Configure data sink and prepare directories when enabled."""
+        self._enabled = data_root_dir is not None
+        self._data_root_dir: Path | None = None
+        self._max_file_size_bytes = 0
+        self._stream_states: dict[_LINE_STREAM_OPTIONS, StreamState] = {
+            'raw': StreamState(),
+            'error': StreamState(),
+        }
+        self._lock = threading.Lock()
+
+        if data_root_dir is None:
+            return
+
+        if max_file_size_kb <= 0:
+            err_msg = 'max_file_size_kb must be greater than 0'
+            raise ValueError(err_msg)
+
+        self._max_file_size_bytes = max_file_size_kb * 1024
+        self._data_root_dir = Path(data_root_dir).expanduser().resolve()
+        self._data_root_dir.mkdir(parents=True, exist_ok=True)
+
+    @staticmethod
+    def _format_iso8601_utc(timestamp: datetime.datetime) -> str:
+        utc_timestamp = timestamp.astimezone(datetime.timezone.utc)
+        return utc_timestamp.isoformat(timespec='microseconds').replace('+00:00', 'Z')
+
+    def store_line(
+        self,
+        stream: _LINE_STREAM_OPTIONS,
+        message: str,
+        timestamp: datetime.datetime,
+    ) -> None:
+        """Store a single incoming line to the matching stream file."""
+        if not self._enabled:
+            return
+
+        iso_timestamp = self._format_iso8601_utc(timestamp)
+        line = f'{iso_timestamp} {message}\n'
+        line_size = len(line.encode('utf-8'))
+
+        with self._lock:
+            try:
+                self._ensure_stream_ready(
+                    stream=stream,
+                    timestamp=timestamp,
+                    incoming_line_size=line_size,
+                )
+                state = self._stream_states[stream]
+                handle = state.handle
+                if handle is None:
+                    return
+                handle.write(line)
+                handle.flush()
+                state.size_bytes += line_size
+            except OSError:
+                _LOGGER.exception('Failed to persist incoming %s line', stream)
+
+    def _ensure_stream_ready(
+        self,
+        stream: _LINE_STREAM_OPTIONS,
+        timestamp: datetime.datetime,
+        incoming_line_size: int,
+    ) -> None:
+        if self._data_root_dir is None:
+            return
+
+        state = self._stream_states[stream]
+        day_key = timestamp.astimezone(datetime.timezone.utc).strftime('%Y%m%d')
+        if state.day_key is not None and state.day_key != day_key:
+            self._close_stream(stream)
+            state = self._stream_states[stream]
+
+        if state.handle is not None:
+            next_size = state.size_bytes + incoming_line_size
+            if next_size > self._max_file_size_bytes:
+                self._close_stream(stream)
+                state = self._stream_states[stream]
+
+        if state.handle is not None:
+            return
+
+        day_dir = self._data_root_dir / day_key
+        day_dir.mkdir(parents=True, exist_ok=True)
+        timestamp_label = self._format_iso8601_utc(timestamp)
+        file_name = f'DALEC_{timestamp_label}.{stream}'
+        path = day_dir / file_name
+        handle = path.open('a', encoding='utf-8', newline='')
+
+        state.handle = handle
+        state.path = path
+        state.size_bytes = path.stat().st_size
+        state.day_key = day_key
+
+    def _close_stream(self, stream: _LINE_STREAM_OPTIONS) -> None:
+        state = self._stream_states[stream]
+        if state.handle is not None:
+            state.handle.close()
+        self._stream_states[stream] = StreamState()
+
+    def close_all_streams(self) -> None:
+        """Close any open stream file handles."""
+        if not self._enabled:
+            return
+        with self._lock:
+            self._close_stream('raw')
+            self._close_stream('error')
+
 
 class TCPTransport(BaseTransport):
     """Telnet-based synchronous transport for DALEC commands."""
 
-    def __init__(self, host: str, port: int = 23):
+    def __init__(
+        self,
+        host: str,
+        port: int = 23,
+        data_root_dir: str | Path | None = None,
+        max_file_size_kb: int = 10240,
+    ):
         """Connect to a DALEC endpoint over Telnet."""
         super().__init__()
         self._connected = False
+        self._data_sink = DataSink(data_root_dir=data_root_dir, max_file_size_kb=max_file_size_kb)
         self._connection = TelnetConnection(host, port, connect_minwait=0.0, encoding='utf8')
         self._host: str = host
         self._port: int = port
@@ -61,6 +202,7 @@ class TCPTransport(BaseTransport):
         self._connection.close()
         self._connected = False
         self._reader_thread.join(timeout=1)
+        self._data_sink.close_all_streams()
 
     def connect(self) -> None:
         """Reconnect to the DALEC endpoint if currently disconnected."""
@@ -88,25 +230,42 @@ class TCPTransport(BaseTransport):
             if not raw_message:
                 break
 
-            if isinstance(raw_message, bytes):
-                raw_message = raw_message.decode()
+            if isinstance(raw_message, str):
+                message = raw_message.strip()
+            elif isinstance(raw_message, bytes):
+                message = raw_message.decode('utf-8').strip()
+            else:
+                message = bytes(raw_message).decode('utf-8').strip()
 
-            message = raw_message.strip()
             if message:
                 self._handle_incoming_data(message)
 
-        # self._responses.append(None)
-
     def _handle_incoming_data(self, message: str) -> None:
+        received_at = self._utc_now()
         try:
             measurement = Measurement.from_raw_data(message)
         except (ValidationError, ValueError):
+            self._data_sink.store_line(
+                stream='error',
+                message=message,
+                timestamp=received_at,
+            )
             with self._responses_lock:
                 self._responses.append(message)
             return
 
+        self._data_sink.store_line(
+            stream='raw',
+            message=message,
+            timestamp=received_at,
+        )
+
         with self._measurement_log_lock:
             self.measurement_log.append(measurement)
+
+    @staticmethod
+    def _utc_now() -> datetime.datetime:
+        return datetime.datetime.now(datetime.timezone.utc)
 
     def start_measurements(self) -> None:
         """Send command to start making measurements."""

@@ -40,16 +40,23 @@ def test_dalec_connect_tcp(monkeypatch):
     recorded = {}
 
     class FakeTCPTransport:
-        def __init__(self, host, port):
+        def __init__(self, host, port, data_root_dir=None, max_file_size_kb=51200):
             recorded['host'] = host
             recorded['port'] = port
+            recorded['data_root_dir'] = data_root_dir
+            recorded['max_file_size_kb'] = max_file_size_kb
 
     monkeypatch.setattr('pydalec.instrument.TCPTransport', FakeTCPTransport)
 
     client = Dalec.connect_tcp('10.0.0.5', 9999)
 
     assert isinstance(client.transport, FakeTCPTransport)
-    assert recorded == {'host': '10.0.0.5', 'port': 9999}
+    assert recorded == {
+        'host': '10.0.0.5',
+        'port': 9999,
+        'data_root_dir': None,
+        'max_file_size_kb': 51200,
+    }
 
 
 def test_dalec_connect_mock(monkeypatch):
@@ -57,16 +64,23 @@ def test_dalec_connect_mock(monkeypatch):
     recorded = {}
 
     class FakeMockTransport:
-        def __init__(self, delay, error_rate):
+        def __init__(self, delay, error_rate, data_root_dir=None, max_file_size_kb=51200):
             recorded['delay'] = delay
             recorded['error_rate'] = error_rate
+            recorded['data_root_dir'] = data_root_dir
+            recorded['max_file_size_kb'] = max_file_size_kb
 
     monkeypatch.setattr('pydalec.instrument.MockTransport', FakeMockTransport)
 
     client = Dalec.connect_mock(delay=0.25, error_rate=0.1)
 
     assert isinstance(client.transport, FakeMockTransport)
-    assert recorded == {'delay': 0.25, 'error_rate': 0.1}
+    assert recorded == {
+        'delay': 0.25,
+        'error_rate': 0.1,
+        'data_root_dir': None,
+        'max_file_size_kb': 51200,
+    }
 
 
 def test_dalec_measurement_log_returns_copy_not_original_list():

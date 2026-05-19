@@ -2,7 +2,7 @@
 
 import datetime
 
-from pydalec.cli import main
+from pydalec.cli import run
 from pydalec.errors import PyDalecConnectionError
 from pydalec.instrument import Location
 from pydalec.measurement import Coordinates, Measurement, StatusFlag, Telemetry
@@ -73,9 +73,11 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
     fake_client = _FakeClient(measurement)
     recorded = {}
 
-    def fake_connect_tcp(ip, port):
+    def fake_connect_tcp(ip, port, data_root_dir=None, max_file_size_kb=None):
         recorded['ip'] = ip
         recorded['port'] = port
+        recorded['data_root_dir'] = data_root_dir
+        recorded['max_file_size_kb'] = max_file_size_kb
         return fake_client
 
     def fake_sleep(_seconds):
@@ -85,12 +87,17 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
     monkeypatch.setattr('pydalec.cli.time.sleep', fake_sleep)
     monkeypatch.setattr('builtins.input', lambda _prompt='': '')
 
-    exit_code = main(['10.0.0.5', '--port', '9999'])
+    exit_code = run(['10.0.0.5', '--port', '9999'])
 
     stdout = capsys.readouterr().out
 
     assert exit_code == 0
-    assert recorded == {'ip': '10.0.0.5', 'port': 9999}
+    assert recorded == {
+        'ip': '10.0.0.5',
+        'port': 9999,
+        'data_root_dir': None,
+        'max_file_size_kb': 51200,
+    }
     assert 'Connected to DALEC at 10.0.0.5:9999' in stdout
     assert 'Current sun zenith: 45.0 deg' in stdout
     assert 'Started measurements. Press Ctrl+C to stop.' in stdout
@@ -103,14 +110,24 @@ def test_cli_connects_starts_streams_and_stops(monkeypatch, capsys):
 
 
 def test_cli_returns_non_zero_on_connection_error(monkeypatch, capsys):
-    def fake_connect_tcp(_ip, _port):
+    def fake_connect_tcp(_ip, _port, data_root_dir=None, max_file_size_kb=None):
+        del data_root_dir, max_file_size_kb
         raise PyDalecConnectionError
 
     monkeypatch.setattr('pydalec.cli.Dalec.connect_tcp', fake_connect_tcp)
 
-    exit_code = main(['192.168.0.100'])
+    exit_code = run(['192.168.0.100'])
 
     stderr = capsys.readouterr().err
 
     assert exit_code == 1
     assert 'Connection failed:' in stderr
+
+
+def test_cli_rejects_max_file_size_without_data_root_dir(capsys):
+    exit_code = run(['192.168.0.100', '--max-file-size-kb', '2048'])
+
+    stderr = capsys.readouterr().err
+
+    assert exit_code == 2
+    assert '--max-file-size-kb requires --data-root-dir.' in stderr

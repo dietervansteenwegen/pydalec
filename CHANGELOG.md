@@ -8,6 +8,7 @@
 - feat: Add method to fetch current GNSS location
 - feat: add acquiring location to CLI test script
 - feat: Add method to fetch current sun zenith
+- feat: Add diskwriter for incoming (TCP) data
 
 ### Changed
 
