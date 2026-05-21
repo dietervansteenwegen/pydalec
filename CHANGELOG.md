@@ -9,7 +9,7 @@
 - feat: add acquiring location to CLI test script
 - feat: Add method to fetch current sun zenith
 - feat: Add diskwriter for incoming (TCP) data
-- build: Add Pytest to pre-commit hooks
+- build: Add tox to pre-commit hooks
 
 ### Changed
 

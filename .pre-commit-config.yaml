@@ -19,12 +19,6 @@ repos:
         language: system
         types: [python]
 
-      - id: pytest
-        name: Pytest
-        entry: uv run pytest
-        language: system
-        pass_filenames: false
-
 # Pre-commit versions self-update
   - repo: https://gitlab.com/vojko.pribudic.foss/pre-commit-update
     rev: v0.9.0
@@ -97,3 +91,12 @@ repos:
       - id: debug-statements
         types: [python]
       - id: requirements-txt-fixer
+
+# Tox
+  - repo: local
+    hooks:
+      - id: tox
+        name: Tox
+        entry: uv run tox
+        language: system
+        pass_filenames: false
