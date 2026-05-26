@@ -131,3 +131,22 @@ def test_cli_rejects_max_file_size_without_data_root_dir(capsys):
 
     assert exit_code == 2
     assert '--max-file-size-kb requires --data-root-dir.' in stderr
+
+
+def test_cli_debug_flag_enables_logging_helper(monkeypatch):
+    called = {'value': False}
+
+    def fake_enable_debug_logging():
+        called['value'] = True
+
+    def fake_connect_tcp(_ip, _port, data_root_dir=None, max_file_size_kb=None):
+        del data_root_dir, max_file_size_kb
+        raise PyDalecConnectionError
+
+    monkeypatch.setattr('pydalec.cli.enable_debug_logging', fake_enable_debug_logging)
+    monkeypatch.setattr('pydalec.cli.Dalec.connect_tcp', fake_connect_tcp)
+
+    exit_code = run(['--debug', '192.168.0.100'])
+
+    assert exit_code == 1
+    assert called['value'] is True

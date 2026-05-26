@@ -87,6 +87,24 @@ This will:
 * start measurements and stream them to stdout
 * keep running until you stop with `Ctrl+C`
 
+## Logging
+
+By default, `pydalec` does not configure the root logger so it can be safely used as a library.
+
+For REPL troubleshooting:
+
+```python
+>>> from pydalec import enable_debug_logging
+>>> enable_debug_logging()
+>>> # then use dalec = Dalec.connect_tcp(...)
+```
+
+For CLI troubleshooting:
+
+```bash
+>>> pydalec-test --debug 192.168.2.11
+```
+
 ## Release History
 
 See [CHANGELOG.md](https://github.com/dietervansteenwegen/pydalec/blob/master/CHANGELOG.md)

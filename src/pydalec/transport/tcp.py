@@ -205,6 +205,8 @@ class TCPTransport(BaseTransport):
         if not self._connected:
             return
 
+        _LOGGER.info('Disconnecting from DALEC at %s:%s', self._host, self._port)
+
         self._connection.close()
         self._connected = False
         self._reader_thread.join(timeout=1)
@@ -226,6 +228,7 @@ class TCPTransport(BaseTransport):
             else:
                 self._connected = True
                 self._setup_background_reader()
+                _LOGGER.info('Connected to DALEC at %s:%s', self._host, self._port)
 
     def _read_incoming_data(self) -> None:
         while True:
@@ -251,6 +254,7 @@ class TCPTransport(BaseTransport):
         try:
             measurement = Measurement.from_raw_data(message)
         except (ValidationError, ValueError):
+            _LOGGER.debug('Received non-measurement line: %s', message)
             self._data_sink.store_line(
                 stream='error',
                 message=message,
@@ -277,11 +281,13 @@ class TCPTransport(BaseTransport):
         """Send command to start making measurements."""
         with self._measurement_log_lock:
             self.measurement_log.clear()
+        _LOGGER.debug('Sending START command')
         self._connection.write('START\r\n')
         self._connection.flush()
 
     def stop_measurements(self) -> None:
         """Send command to stop making measurements."""
+        _LOGGER.debug('Sending STOP command')
         self._connection.write('STOP\r\n')
         self._connection.flush()
 

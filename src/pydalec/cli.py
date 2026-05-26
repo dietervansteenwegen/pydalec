@@ -13,6 +13,7 @@ from pydalec.errors import (
     PyDalecNoSolarZenithDataError,
 )
 from pydalec.instrument import Dalec, Location
+from pydalec.logging_utils import enable_debug_logging
 
 
 class _CliArgumentError(ValueError):
@@ -45,10 +46,15 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default=0.2,
         help='Polling interval in seconds for new measurements (default: 0.2)',
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Enable pydalec debug logging (without configuring the root logger)',
+    )
     return parser.parse_args(argv)
 
 
-def _print_new_measurements(client: Dalec, last_measurement) -> object | None:
+def _print_new_measurements(client: Dalec, last_measurement: object | None) -> object | None:
     """Print newly received measurements and return the latest seen record."""
     measurements = client.measurement_log
     if not measurements:
@@ -116,6 +122,9 @@ def run(argv: Sequence[str] | None = None) -> int:
     if isinstance(args, int):
         return args
 
+    if args.debug:
+        enable_debug_logging()
+
     try:
         client = Dalec.connect_tcp(
             args.ip,
@@ -133,10 +142,16 @@ def run(argv: Sequence[str] | None = None) -> int:
     print(f'Connected to DALEC at {args.ip}:{args.port}')
     print_header(client)
 
-    measurements_started = False
-    exit_code = 0
-    last_measurement = None
+    exit_code = make_measurements(args, client)
 
+    return exit_code
+
+
+def make_measurements(args: argparse.Namespace, client: Dalec) -> int:
+    """Stream measurements until interrupted and return an exit code."""
+    last_measurement = None
+    exit_code = 0
+    measurements_started = False
     try:
         client.start_measurements()
         measurements_started = True
@@ -165,7 +180,6 @@ def run(argv: Sequence[str] | None = None) -> int:
             exit_code = 1
 
         print('Disconnected.')
-
     return exit_code
 
 

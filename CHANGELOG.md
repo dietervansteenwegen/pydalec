@@ -10,6 +10,7 @@
 - feat: Add method to fetch current sun zenith
 - feat: Add diskwriter for incoming (TCP) data
 - build: Add tox to pre-commit hooks
+- feat: Add opt-in package debug logging
 
 ### Changed
 
