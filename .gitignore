@@ -17,6 +17,7 @@ wheels/
 
 # Pytest:
 .coverage
+.tox
 
 # Flask stuff:
 instance/
