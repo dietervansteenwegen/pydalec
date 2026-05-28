@@ -81,9 +81,6 @@ source = "versioningit"
 
 [tool.versioningit]
 
-[tool.versioningit.write]
-file = "src/pydalec/__version__.py"
-
 [tool.uv.pip]
 generate-hashes = true
 

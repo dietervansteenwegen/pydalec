@@ -13,6 +13,7 @@
 
 ### Changed
 
+- build: improve __version__ tracking
 - fix: `Transport.connected` is single source of truth for connection state
 - refactor: rewrite measurement buffer handling
 - refactor: Track measurements by object reference for efficient polling
