@@ -2,7 +2,7 @@
 
 import logging
 
-from pydalec import __version__  # noqa: F401
+from pydalec.__version__ import __version__  # noqa: F401
 from pydalec.instrument import Dalec  # noqa: F401
 from pydalec.logging_utils import enable_debug_logging  # noqa: F401
 
