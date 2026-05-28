@@ -84,7 +84,7 @@ This will:
 * print a "successful connection" message
 * print the current instrument location, if available
 * print the current sun zenith, if available
-* start measurements and streams them to stdout
+* start measurements and stream them to stdout
 * keep running until you stop with `Ctrl+C`
 
 ## Release History

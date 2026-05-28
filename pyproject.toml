@@ -10,7 +10,15 @@ authors = [{ name = 'Dieter Vansteenwegen', email = 'github@boxfish.be' }]
 
 classifiers = [
     'Development Status :: 4 - Beta',
+    'Intended Audience :: Science/Research',
     'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Scientific/Engineering :: Oceanography',
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Operating System :: Microsoft :: Windows :: Windows 10",
@@ -18,7 +26,17 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 
-keywords = ['DALEC']
+keywords = [
+    'DALEC',
+    'marine optics',
+    'ocean color',
+    'ocean optics',
+    'radiometry',
+    'irradiance',
+    'radiance',
+    'spectroradiometer',
+    'telemetry',
+]
 
 dependencies = ["pydantic>=2.12.5", "telnetlib3>=4.0.1"]
 
