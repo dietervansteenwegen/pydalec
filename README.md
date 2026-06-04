@@ -1,6 +1,6 @@
 # pydalec
 
->Library for the `D`ynamic `A`bove-water radiance(`L`) and irradiance(`E`) `C`ollector (`DALEC`)
+>Library for the **D**ynamic **A**bove-water radiance(**L**) and irradiance(**E**) **C**ollector (`DALEC`)
 >from [In-situ Marine Optics].
 
 ![GitHub last commit (master)](https://img.shields.io/github/last-commit/dietervansteenwegen/pydalec/develop?style=plastic)
