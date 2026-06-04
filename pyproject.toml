@@ -115,7 +115,7 @@ exclude = [
     "docs",
 
 ]
-target-version = "py39"
+target-version = "py311"
 line-length = 100
 indent-width = 4
 
@@ -205,6 +205,9 @@ paths = ['./src']
 # make_whitelist = true
 # sort_by_size = true
 # verbose = true
+
+[tool.deptry]
+known_first_party = ["pydalec", "pydalec_mock"]
 
 [tool.pymarkdown]
 ignore_files = ["./docs/source/readme_link.md"]
