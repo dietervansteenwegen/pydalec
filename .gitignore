@@ -74,3 +74,4 @@ logs/
 *.db
 sourcetrail/
 generated/
+pydalec.code-workspace

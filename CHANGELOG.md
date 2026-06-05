@@ -1,6 +1,6 @@
 # pydalec CHANGELOG
 
-## Not released yet
+## v0.1.0 (20260603)
 
 ### Added
 
