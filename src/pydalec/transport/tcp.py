@@ -17,7 +17,7 @@ from pydalec.measurement import Measurement
 from pydalec.transport.base import BaseTransport
 
 _LINE_STREAM_OPTIONS = Literal['raw', 'error']
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger(name=__name__)
 
 
 @dataclass
@@ -38,9 +38,9 @@ class DataSink:
         self,
         data_root_dir: str | Path | None,
         max_file_size_kb: int,
-    ):
+    ) -> None:
         """Configure data sink and prepare directories when enabled."""
-        self._enabled = data_root_dir is not None
+        self._enabled: bool = data_root_dir is not None
         self._data_root_dir: Path | None = None
         self._max_file_size_bytes = 0
         self._stream_states: dict[_LINE_STREAM_OPTIONS, StreamState] = {
@@ -56,19 +56,27 @@ class DataSink:
             err_msg = 'max_file_size_kb must be greater than 0'
             raise ValueError(err_msg)
 
-        self._max_file_size_bytes = max_file_size_kb * 1024
-        self._data_root_dir = Path(data_root_dir).expanduser().resolve()
+        self._max_file_size_bytes: int = max_file_size_kb * 1024
+        self._data_root_dir: Path = Path(data_root_dir).expanduser().resolve()
         self._data_root_dir.mkdir(parents=True, exist_ok=True)
 
     @staticmethod
     def _format_iso8601_utc(timestamp: datetime.datetime) -> str:
-        utc_timestamp = timestamp.astimezone(datetime.timezone.utc)
+        """Format timestamp as UTC ISO8601 with trailing Z.
+
+        Args:
+            timestamp: Timestamp to normalize and format.
+
+        Returns:
+            ISO8601 timestamp string in UTC.
+        """
+        utc_timestamp: datetime.datetime = timestamp.astimezone(datetime.timezone.utc)
         return utc_timestamp.isoformat(timespec='microseconds').replace('+00:00', 'Z')
 
     @staticmethod
     def _format_filename_timestamp_utc(timestamp: datetime.datetime) -> str:
         """Return filesystem-safe ISO8601 basic UTC timestamp for filenames."""
-        utc_timestamp = timestamp.astimezone(datetime.timezone.utc)
+        utc_timestamp: datetime.datetime = timestamp.astimezone(datetime.timezone.utc)
         return utc_timestamp.strftime('%Y%m%dT%H%M%S.%fZ')
 
     def store_line(
@@ -81,9 +89,9 @@ class DataSink:
         if not self._enabled:
             return
 
-        iso_timestamp = self._format_iso8601_utc(timestamp)
+        iso_timestamp: str = self._format_iso8601_utc(timestamp)
         line = f'{iso_timestamp} {message}\n'
-        line_size = len(line.encode('utf-8'))
+        line_size: int = len(line.encode(encoding='utf-8'))
 
         with self._lock:
             try:
@@ -92,8 +100,8 @@ class DataSink:
                     timestamp=timestamp,
                     incoming_line_size=line_size,
                 )
-                state = self._stream_states[stream]
-                handle = state.handle
+                state: StreamState = self._stream_states[stream]
+                handle: io.TextIOBase | None = state.handle
                 if handle is None:
                     return
                 handle.write(line)
@@ -108,31 +116,38 @@ class DataSink:
         timestamp: datetime.datetime,
         incoming_line_size: int,
     ) -> None:
+        """Ensure stream file is open and ready for writing.
+
+        Args:
+            stream: Stream type to write.
+            timestamp: Timestamp used for day partitioning and filenames.
+            incoming_line_size: Byte size of the next line to append.
+        """
         if self._data_root_dir is None:
             return
 
-        state = self._stream_states[stream]
-        day_key = timestamp.astimezone(datetime.timezone.utc).strftime('%Y%m%d')
+        state: StreamState = self._stream_states[stream]
+        day_key: str = timestamp.astimezone(datetime.timezone.utc).strftime('%Y%m%d')
         if state.day_key is not None and state.day_key != day_key:
-            self._close_stream(stream, finalize=True)
+            self._close_stream(stream=stream, finalize=True)
             state = self._stream_states[stream]
 
         if state.handle is not None:
-            next_size = state.size_bytes + incoming_line_size
+            next_size: int = state.size_bytes + incoming_line_size
             if next_size > self._max_file_size_bytes:
-                self._close_stream(stream, finalize=True)
+                self._close_stream(stream=stream, finalize=True)
                 state = self._stream_states[stream]
 
         if state.handle is not None:
             return
 
-        day_dir = self._data_root_dir / day_key
+        day_dir: Path = self._data_root_dir / day_key
         day_dir.mkdir(parents=True, exist_ok=True)
-        timestamp_label = self._format_filename_timestamp_utc(timestamp)
+        timestamp_label: str = self._format_filename_timestamp_utc(timestamp)
         file_name = f'DALEC_{timestamp_label}.{stream}'
-        final_path = day_dir / file_name
-        temp_path = day_dir / f'writing.{stream}'
-        handle = temp_path.open('a', encoding='utf-8', newline='')
+        final_path: Path = day_dir / file_name
+        temp_path: Path = day_dir / f'writing.{stream}'
+        handle: io.TextIOBase = temp_path.open(mode='a', encoding='utf-8', newline='')
 
         state.handle = handle
         state.temp_path = temp_path
@@ -141,7 +156,13 @@ class DataSink:
         state.day_key = day_key
 
     def _close_stream(self, stream: _LINE_STREAM_OPTIONS, finalize: bool) -> None:
-        state = self._stream_states[stream]
+        """Close and reset one stream state.
+
+        Args:
+            stream: Stream to close.
+            finalize: Rename the temporary file to its final timestamped path.
+        """
+        state: StreamState = self._stream_states[stream]
         if state.handle is not None:
             state.handle.close()
         if finalize and state.temp_path is not None and state.final_path is not None:
@@ -153,8 +174,8 @@ class DataSink:
         if not self._enabled:
             return
         with self._lock:
-            self._close_stream('raw', finalize=True)
-            self._close_stream('error', finalize=True)
+            self._close_stream(stream='raw', finalize=True)
+            self._close_stream(stream='error', finalize=True)
 
 
 class TCPTransport(BaseTransport):
@@ -166,7 +187,7 @@ class TCPTransport(BaseTransport):
         port: int = 23,
         data_root_dir: str | Path | None = None,
         max_file_size_kb: int = 10240,
-    ):
+    ) -> None:
         """Connect to a DALEC endpoint over Telnet."""
         super().__init__()
         self._connected = False
@@ -182,6 +203,7 @@ class TCPTransport(BaseTransport):
             raise PyDalecConnectionError(err_msg) from e
 
     def _setup_background_reader(self) -> None:
+        """Initialize shared reader state and start the reader thread."""
         self._measurement_log_lock = threading.Lock()
         self._responses: deque[str | None] = deque()
         self._responses_lock = threading.Lock()
@@ -210,7 +232,7 @@ class TCPTransport(BaseTransport):
         if not self._connected:
             return
 
-        _LOGGER.info('Disconnecting from DALEC at %s:%s', self._host, self._port)
+        _LOGGER.info(msg=f'Disconnecting from DALEC at {self._host}:{self._port}')
 
         self._connection.close()
         self._connected = False
@@ -233,31 +255,37 @@ class TCPTransport(BaseTransport):
             else:
                 self._connected = True
                 self._setup_background_reader()
-                _LOGGER.info('Connected to DALEC at %s:%s', self._host, self._port)
+                _LOGGER.info(msg=f'Connected to DALEC at {self._host}:{self._port}')
 
     def _read_incoming_data(self) -> None:
+        """Read incoming telnet lines and forward parsed messages."""
         while True:
             try:
-                raw_message = self._connection.readline()
+                raw_message: str | bytes = self._connection.readline()
             except (EOFError, RuntimeError):
                 break
             if not raw_message:
                 break
 
             if isinstance(raw_message, str):
-                message = raw_message.strip()
+                message: str = raw_message.strip()
             elif isinstance(raw_message, bytes):
-                message = raw_message.decode('utf-8').strip()
+                message: str = raw_message.decode('utf-8').strip()
             else:
-                message = bytes(raw_message).decode('utf-8').strip()
+                message: str = bytes(raw_message).decode('utf-8').strip()
 
             if message:
                 self._handle_incoming_data(message)
 
     def _handle_incoming_data(self, message: str) -> None:
-        received_at = self._utc_now()
+        """Handle one decoded incoming line.
+
+        Args:
+            message: Raw line payload from the instrument.
+        """
+        received_at: datetime.datetime = self._utc_now()
         try:
-            measurement = Measurement.from_raw_data(message)
+            measurement: Measurement = Measurement.from_raw_data(raw_data=message)
         except (ValidationError, ValueError):
             _LOGGER.debug('Received non-measurement line: %s', message)
             self._data_sink.store_line(
@@ -280,6 +308,11 @@ class TCPTransport(BaseTransport):
 
     @staticmethod
     def _utc_now() -> datetime.datetime:
+        """Return current UTC time.
+
+        Returns:
+            Timezone-aware current UTC timestamp.
+        """
         return datetime.datetime.now(datetime.timezone.utc)
 
     def start_measurements(self) -> None:
