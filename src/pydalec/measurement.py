@@ -8,19 +8,19 @@ import math
 from decimal import Decimal
 from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 RAW_DATA_FIXED_FIELD_COUNT = 22
 SPECTRUM_LENGTH = 190
-RAW_DATA_FIELD_COUNT = RAW_DATA_FIXED_FIELD_COUNT + SPECTRUM_LENGTH
+RAW_DATA_FIELD_COUNT: Literal[212] = RAW_DATA_FIXED_FIELD_COUNT + SPECTRUM_LENGTH
 
 
 def _has_max_decimals(value: float, decimals: int) -> bool:
     """Check if a float value has at most a specified number of decimal places."""
     if math.isnan(value):
         return True
-    decimal_value = Decimal(str(value))
-    quantized_value: Decimal = decimal_value.quantize(Decimal(1).scaleb(-decimals))
+    decimal_value = Decimal(value=str(object=value))
+    quantized_value: Decimal = decimal_value.quantize(exp=Decimal(value=1).scaleb(other=-decimals))
     return decimal_value == quantized_value
 
 
@@ -65,12 +65,28 @@ class Coordinates(BaseModel):
     @field_validator('lat')
     @classmethod
     def _validate_lat(cls, value: float) -> float:
-        return _validate_range_or_nan(value, -90.0, 90.0, 'lat')
+        """Validate latitude range.
+
+        Args:
+            value: Latitude in decimal degrees.
+
+        Returns:
+            The validated latitude value.
+        """
+        return _validate_range_or_nan(value, minimum=-90.0, maximum=90.0, field_name='lat')
 
     @field_validator('lon')
     @classmethod
     def _validate_lon(cls, value: float) -> float:
-        return _validate_range_or_nan(value, -180.0, 180.0, 'lon')
+        """Validate longitude range.
+
+        Args:
+            value: Longitude in decimal degrees.
+
+        Returns:
+            The validated longitude value.
+        """
+        return _validate_range_or_nan(value, minimum=-180.0, maximum=180.0, field_name='lon')
 
     def __str__(self) -> str:
         """String representation in the format 'lat,lon' with N/S and E/W."""
@@ -110,7 +126,15 @@ class Telemetry(BaseModel):
     @field_validator('voltage_volts')
     @classmethod
     def _validate_voltage_precision(cls, value: float) -> float:
-        if not _has_max_decimals(value, 1):
+        """Validate voltage precision.
+
+        Args:
+            value: Voltage in volts.
+
+        Returns:
+            The validated voltage value.
+        """
+        if not _has_max_decimals(value, decimals=1):
             err_msg: str = f'voltage_volts must have at most 1 decimal place (value: {value})'
             raise ValueError(err_msg)
         return value
@@ -118,7 +142,15 @@ class Telemetry(BaseModel):
     @field_validator('humidity_mm_hg')
     @classmethod
     def _validate_humidity_precision(cls, value: float) -> float:
-        if not _has_max_decimals(value, 1):
+        """Validate humidity precision.
+
+        Args:
+            value: Humidity in mmHg.
+
+        Returns:
+            The validated humidity value.
+        """
+        if not _has_max_decimals(value, decimals=1):
             err_msg: str = f'Humidity_mm_hg must have at most 1 decimal place (value: {value})'
             raise ValueError(err_msg)
         return value
@@ -126,6 +158,14 @@ class Telemetry(BaseModel):
     @field_validator('temperature_diode_celsius')
     @classmethod
     def _validate_temp_precision(cls, value: float) -> float:
+        """Validate temperature precision.
+
+        Args:
+            value: Diode temperature in Celsius.
+
+        Returns:
+            The validated temperature value.
+        """
         if not _has_max_decimals(value, decimals=3):
             err_msg: str = (
                 f'temperature_diode_celsius must have at most 3 decimal places (value: {value})'
@@ -177,7 +217,15 @@ class Measurement(BaseModel):
     @field_validator('utc_time')
     @classmethod
     def _validate_utc_time(cls, v: datetime.datetime) -> datetime.datetime:
-        if v.tzinfo is None or v.utcoffset() != datetime.timedelta(0):
+        """Validate UTC timestamp semantics.
+
+        Args:
+            v: Timestamp to validate.
+
+        Returns:
+            The validated UTC timestamp.
+        """
+        if v.tzinfo is None or v.utcoffset() != datetime.timedelta(days=0):
             err_msg = 'utc_time must be timezone-aware UTC'
             raise ValueError(err_msg)
         return v
@@ -185,6 +233,14 @@ class Measurement(BaseModel):
     @field_validator('spectrum')
     @classmethod
     def _validate_spectrum_values(cls, value: list[int]) -> list[int]:
+        """Validate spectral sample range.
+
+        Args:
+            value: Spectrum values from the instrument.
+
+        Returns:
+            The validated spectrum values.
+        """
         if any((x < 0 or x > 65535) for x in value):
             err_msg = 'All spectrum values must be in range 0..65535'
             raise ValueError(err_msg)
@@ -197,23 +253,63 @@ class Measurement(BaseModel):
         'azimuth_deg',
     )
     @classmethod
-    def _validate_bearing_fields(cls, value: float, info) -> float:
-        return _validate_range_or_nan(value, 0.0, 359.9, info.field_name)
+    def _validate_bearing_fields(cls, value: float, info: ValidationInfo) -> float:
+        """Validate 0..359.9 degree bearing fields.
+
+        Args:
+            value: Field value to validate.
+            info: Pydantic validation metadata for current field.
+
+        Returns:
+            The validated bearing value.
+        """
+        return _validate_range_or_nan(value, minimum=0.0, maximum=359.9, field_name=info.field_name)
 
     @field_validator('gear_position_deg', 'relative_azimuth_deg', 'roll_start_measurement_deg')
     @classmethod
-    def _validate_signed_heading_fields(cls, value: float, info) -> float:
-        return _validate_range_or_nan(value, -179.9, 180.0, info.field_name)
+    def _validate_signed_heading_fields(cls, value: float, info: ValidationInfo) -> float:
+        """Validate signed heading fields.
+
+        Args:
+            value: Field value to validate.
+            info: Pydantic validation metadata for current field.
+
+        Returns:
+            The validated signed heading value.
+        """
+        return _validate_range_or_nan(
+            value, minimum=-179.9, maximum=180.0, field_name=info.field_name
+        )
 
     @field_validator('pitch_start_measurement_deg')
     @classmethod
     def _validate_pitch_field(cls, value: float) -> float:
-        return _validate_range_or_nan(value, -90.0, 90.0, 'pitch_start_measurement_deg')
+        """Validate pitch range.
+
+        Args:
+            value: Pitch value in degrees.
+
+        Returns:
+            The validated pitch value.
+        """
+        return _validate_range_or_nan(
+            value, minimum=-90.0, maximum=90.0, field_name='pitch_start_measurement_deg'
+        )
 
     @field_validator('signal_percentage')
     @classmethod
     def _validate_signal_percentage(cls, value: float) -> float:
-        return _validate_range_or_nan(value, 0.0, 100.0, 'signal_percentage')
+        """Validate signal percentage range.
+
+        Args:
+            value: Signal percentage value.
+
+        Returns:
+            The validated signal percentage.
+        """
+        return _validate_range_or_nan(
+            value, minimum=0.0, maximum=100.0, field_name='signal_percentage'
+        )
 
     def __str__(self) -> str:
         """Human-readable multiline string representation of a measurement."""
@@ -268,7 +364,7 @@ class Measurement(BaseModel):
     @classmethod
     def from_raw_data(cls, raw_data: str) -> Self:
         """Factory method from string to Measurement model."""
-        fields = [field.strip() for field in raw_data.strip().split(',')]
+        fields = [field.strip() for field in raw_data.strip().split(sep=',')]
         if len(fields) != RAW_DATA_FIELD_COUNT:
             err_msg = f'raw_data must contain {RAW_DATA_FIELD_COUNT} comma-separated fields'
             raise ValueError(err_msg)
@@ -302,4 +398,4 @@ class Measurement(BaseModel):
             'max_counts': int(fields[21]),
             'spectrum': [int(value) for value in fields[RAW_DATA_FIXED_FIELD_COUNT:]],
         }
-        return cls.model_validate(payload)
+        return cls.model_validate(obj=payload)

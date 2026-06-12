@@ -11,6 +11,7 @@ from pydalec.errors import (
     PyDalecNoPositionDataError,
     PyDalecNoSolarZenithDataError,
 )
+from pydalec.transport.base import BaseTransport
 from pydalec.transport.mock import MockTransport
 from pydalec.transport.tcp import TCPTransport
 
@@ -18,7 +19,7 @@ from pydalec.transport.tcp import TCPTransport
 class DalecStatus:
     """Instrument status."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the status with default values."""
         self.measuring: bool = False
 
@@ -48,9 +49,13 @@ class Location:
 class Dalec:
     """Client API for synchronous DALEC commands."""
 
-    def __init__(self, transport):
-        """Initialize the client with a transport implementation."""
-        self.transport = transport
+    def __init__(self, transport: BaseTransport) -> None:
+        """Initialize the client with a transport implementation.
+
+        Args:
+            transport: Transport backend used to communicate with the instrument.
+        """
+        self.transport: BaseTransport = transport
         self.status = DalecStatus()
 
     @classmethod
@@ -60,8 +65,18 @@ class Dalec:
         port: int = 23,
         data_root_dir: str | None = None,
         max_file_size_kb: int = 51200,
-    ):
-        """Create a client connected to a DALEC TCP endpoint."""
+    ) -> Dalec:
+        """Create a client connected to a DALEC TCP endpoint.
+
+        Args:
+            host: Hostname or IP address of the DALEC endpoint.
+            port: TCP port of the DALEC endpoint.
+            data_root_dir: Optional directory for persisted incoming lines.
+            max_file_size_kb: Maximum per-file size before rollover.
+
+        Returns:
+            A connected client instance using TCP transport.
+        """
         return cls(
             transport=TCPTransport(
                 host,
@@ -78,8 +93,18 @@ class Dalec:
         error_rate: float = 0.0,
         data_root_dir: str | None = None,
         max_file_size_kb: int = 51200,
-    ):
-        """Create a client using the in-memory mock transport."""
+    ) -> Dalec:
+        """Create a client using the in-memory mock transport.
+
+        Args:
+            delay: Simulated response delay in seconds.
+            error_rate: Probability of simulated transport errors.
+            data_root_dir: Optional data directory placeholder for API parity.
+            max_file_size_kb: Optional file size placeholder for API parity.
+
+        Returns:
+            A client instance using the mock transport.
+        """
         return cls(
             MockTransport(
                 delay=delay,
@@ -104,7 +129,7 @@ class Dalec:
             self.transport.connect()
 
     @property
-    def measurement_log(self):
+    def measurement_log(self) -> list[Any]:
         """Return a list of recent measurements from the instrument."""
         return list(self.transport.measurement_log)
 

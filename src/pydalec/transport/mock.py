@@ -12,12 +12,12 @@ class MockTransport(BaseTransport):
         error_rate: float = 0.0,
         data_root_dir: str | None = None,
         max_file_size_kb: int = 51200,
-    ):
+    ) -> None:
         """Initialize mock behavior options for delay and error simulation."""
         super().__init__()
         del data_root_dir, max_file_size_kb  # TODO: implement file handling in the mock transport
-        self.delay = delay
-        self.error_rate = error_rate
+        self.delay: int | float = delay
+        self.error_rate: int | float = error_rate
         self._making_measurements = False
         self._connected = True
 
