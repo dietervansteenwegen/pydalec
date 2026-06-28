@@ -212,3 +212,5 @@ known_first_party = ["pydalec", "pydalec_mock"]
 [tool.pymarkdown]
 ignore_files = ["./docs/source/readme_link.md"]
 plugins.line-length.line_length = 100
+# Allow repeated headings like "Changed" across version sections in CHANGELOG.
+plugins.md024.siblings_only = true

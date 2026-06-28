@@ -141,6 +141,7 @@ def test_tcp_transport_receive_decodes_and_strips(monkeypatch):
         lambda _host, _port, **_kwargs: fake_connection,
     )
     transport = TCPTransport('localhost', 9999)
+    transport._reader_thread.join(timeout=1)
 
     assert transport._get_reply() == 'VALUE'
 
@@ -178,6 +179,7 @@ def test_tcp_transport_reader_decodes_bytes_messages(monkeypatch):
         lambda _host, _port, **_kwargs: fake_connection,
     )
     transport = TCPTransport('localhost', 9999)
+    transport._reader_thread.join(timeout=1)
 
     assert transport._get_reply() == 'VALUE'
 
@@ -191,6 +193,7 @@ def test_tcp_transport_logs_unsolicited_measurements(monkeypatch):
     )
 
     transport = TCPTransport('localhost', 9999)
+    transport._reader_thread.join(timeout=1)
 
     assert transport._get_reply() == 'OK'
     assert len(transport.measurement_log) == 1
@@ -362,17 +365,30 @@ def test_tcp_transport_persists_valid_and_invalid_lines(monkeypatch, tmp_path):
     transport._handle_incoming_data(invalid_line)
 
     day_dir = tmp_path / '20240601'
-    raw_files = list(day_dir.glob('*.raw'))
-    error_files = list(day_dir.glob('*.error'))
+    raw_files = list(day_dir.glob('DALEC_*.raw'))
+    error_files = list(day_dir.glob('DALEC_*.error'))
+    writing_raw = day_dir / 'writing.raw'
+    writing_error = day_dir / 'writing.error'
 
     assert len(transport.measurement_log) == 1
     assert transport._get_reply() == invalid_line
+    assert raw_files == []
+    assert error_files == []
+    assert writing_raw.exists()
+    assert writing_error.exists()
+    assert writing_raw.read_text(encoding='utf-8').startswith('2024-06-01T12:00:00.000000Z ')
+    assert writing_error.read_text(encoding='utf-8').startswith('2024-06-01T12:00:01.000000Z ')
+
+    transport.disconnect()
+
+    raw_files = list(day_dir.glob('DALEC_*.raw'))
+    error_files = list(day_dir.glob('DALEC_*.error'))
     assert len(raw_files) == 1
     assert len(error_files) == 1
     assert raw_files[0].name.startswith('DALEC_20240601T120000.000000Z')
     assert error_files[0].name.startswith('DALEC_20240601T120001.000000Z')
-    assert raw_files[0].read_text(encoding='utf-8').startswith('2024-06-01T12:00:00.000000Z ')
-    assert error_files[0].read_text(encoding='utf-8').startswith('2024-06-01T12:00:01.000000Z ')
+    assert not writing_raw.exists()
+    assert not writing_error.exists()
 
 
 def test_tcp_transport_rolls_over_raw_stream_at_midnight(monkeypatch, tmp_path):
@@ -394,13 +410,15 @@ def test_tcp_transport_rolls_over_raw_stream_at_midnight(monkeypatch, tmp_path):
     transport._handle_incoming_data(_measurement_payload('0001').strip())
     transport._handle_incoming_data(_measurement_payload('0002').strip())
 
-    day1_files = list((tmp_path / '20240601').glob('*.raw'))
-    day2_files = list((tmp_path / '20240602').glob('*.raw'))
+    day1_dir = tmp_path / '20240601'
+    day2_dir = tmp_path / '20240602'
+    day1_files = list(day1_dir.glob('DALEC_*.raw'))
+    day2_files = list(day2_dir.glob('DALEC_*.raw'))
 
     assert len(day1_files) == 1
-    assert len(day2_files) == 1
+    assert len(day2_files) == 0
     assert day1_files[0].name.startswith('DALEC_20240601T235959.000000Z')
-    assert day2_files[0].name.startswith('DALEC_20240602T000001.000000Z')
+    assert (day2_dir / 'writing.raw').exists()
 
 
 def test_tcp_transport_rotates_error_stream_independently(monkeypatch, tmp_path):
@@ -425,10 +443,12 @@ def test_tcp_transport_rotates_error_stream_independently(monkeypatch, tmp_path)
     transport._handle_incoming_data('Y' * 1600)
 
     day_dir = tmp_path / '20240601'
-    raw_files = list(day_dir.glob('*.raw'))
-    error_files = list(day_dir.glob('*.error'))
+    raw_files = list(day_dir.glob('DALEC_*.raw'))
+    error_files = list(day_dir.glob('DALEC_*.error'))
 
-    assert len(raw_files) == 1
-    assert len(error_files) == 2
+    assert len(raw_files) == 0
+    assert len(error_files) == 1
+    assert (day_dir / 'writing.raw').exists()
+    assert (day_dir / 'writing.error').exists()
     assert transport._get_reply() == 'X' * 1600
     assert transport._get_reply() == 'Y' * 1600

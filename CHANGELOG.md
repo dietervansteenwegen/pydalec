@@ -1,5 +1,11 @@
 # pydalec CHANGELOG
 
+## Not released yet
+
+### Changed
+
+- feat: use `writing.ext` as temporary filenames while writing
+
 ## v0.1.0 (20260603)
 
 ### Added

@@ -25,7 +25,8 @@ class StreamState:
     """Track the current file handle and rollover state for one stream."""
 
     handle: io.TextIOBase | None = None
-    path: Path | None = None
+    temp_path: Path | None = None
+    final_path: Path | None = None
     size_bytes: int = 0
     day_key: str | None = None
 
@@ -113,13 +114,13 @@ class DataSink:
         state = self._stream_states[stream]
         day_key = timestamp.astimezone(datetime.timezone.utc).strftime('%Y%m%d')
         if state.day_key is not None and state.day_key != day_key:
-            self._close_stream(stream)
+            self._close_stream(stream, finalize=True)
             state = self._stream_states[stream]
 
         if state.handle is not None:
             next_size = state.size_bytes + incoming_line_size
             if next_size > self._max_file_size_bytes:
-                self._close_stream(stream)
+                self._close_stream(stream, finalize=True)
                 state = self._stream_states[stream]
 
         if state.handle is not None:
@@ -129,18 +130,22 @@ class DataSink:
         day_dir.mkdir(parents=True, exist_ok=True)
         timestamp_label = self._format_filename_timestamp_utc(timestamp)
         file_name = f'DALEC_{timestamp_label}.{stream}'
-        path = day_dir / file_name
-        handle = path.open('a', encoding='utf-8', newline='')
+        final_path = day_dir / file_name
+        temp_path = day_dir / f'writing.{stream}'
+        handle = temp_path.open('a', encoding='utf-8', newline='')
 
         state.handle = handle
-        state.path = path
-        state.size_bytes = path.stat().st_size
+        state.temp_path = temp_path
+        state.final_path = final_path
+        state.size_bytes = temp_path.stat().st_size
         state.day_key = day_key
 
-    def _close_stream(self, stream: _LINE_STREAM_OPTIONS) -> None:
+    def _close_stream(self, stream: _LINE_STREAM_OPTIONS, finalize: bool) -> None:
         state = self._stream_states[stream]
         if state.handle is not None:
             state.handle.close()
+        if finalize and state.temp_path is not None and state.final_path is not None:
+            state.temp_path.replace(state.final_path)
         self._stream_states[stream] = StreamState()
 
     def close_all_streams(self) -> None:
@@ -148,8 +153,8 @@ class DataSink:
         if not self._enabled:
             return
         with self._lock:
-            self._close_stream('raw')
-            self._close_stream('error')
+            self._close_stream('raw', finalize=True)
+            self._close_stream('error', finalize=True)
 
 
 class TCPTransport(BaseTransport):
