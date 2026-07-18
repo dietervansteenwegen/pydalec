@@ -6,7 +6,13 @@ import math
 import pytest
 from pydantic import ValidationError
 
-from pydalec.measurement import Coordinates, Measurement, Telemetry, _has_max_decimals
+from pydalec.measurement import (
+    Coordinates,
+    GearCalibrationStatus,
+    Measurement,
+    Telemetry,
+    _has_max_decimals,
+)
 
 UTC = datetime.timezone.utc
 
@@ -162,6 +168,10 @@ class TestTelemetry:
         with pytest.raises(ValidationError):
             self._valid_telemetry(status_flag=-1)
 
+    def test_status_flag_above_byte_rejected(self):
+        with pytest.raises(ValidationError):
+            self._valid_telemetry(status_flag=256)
+
     def test_extra_field_forbidden(self):
         with pytest.raises(ValidationError):
             self._valid_telemetry(extra_field='bad')
@@ -189,6 +199,49 @@ class TestTelemetry:
 
         t = self._valid_telemetry(status_flag=StatusFlag.MOVING)
         assert t.status_flag == StatusFlag.MOVING
+
+    def test_status_flag_all_bits_are_decoded(self):
+        t = self._valid_telemetry(status_flag=0b00011111)
+
+        assert t.servo_moved_during_integration is True
+        assert t.n2k_epoch_valid is False
+        assert t.n2k_heading_valid is False
+        assert t.n2k_gps_valid is False
+        assert t.require_configuration is True
+        assert t.gear_calibration_status == GearCalibrationStatus.CALIBRATION_OK
+
+    def test_n2k_valid_properties_true_when_bits_clear(self):
+        t = self._valid_telemetry(status_flag=0)
+
+        assert t.n2k_epoch_valid is True
+        assert t.n2k_heading_valid is True
+        assert t.n2k_gps_valid is True
+
+    @pytest.mark.parametrize(
+        ('raw_flag', 'expected_status'),
+        [
+            (0b00000000, GearCalibrationStatus.CALIBRATION_OK),
+            (0b00100000, GearCalibrationStatus.MOVE_LEFT),
+            (0b01000000, GearCalibrationStatus.MOVE_RIGHT),
+            (0b01100000, GearCalibrationStatus.MOVE_CENTRE),
+            (0b10000000, GearCalibrationStatus.MANUAL_ENDSTOPS),
+            (0b10100000, GearCalibrationStatus.MOVE_RIGHT_MAGNET_NOT_YET_DETECTED),
+            (0b11000000, GearCalibrationStatus.RESERVED),
+            (0b11100000, GearCalibrationStatus.NOT_CALIBRATED),
+        ],
+    )
+    def test_gear_calibration_status_mapping(self, raw_flag: int, expected_status):
+        t = self._valid_telemetry(status_flag=raw_flag)
+
+        assert t.gear_calibration_status == expected_status
+
+    def test_status_bits_normal_when_no_flags_set(self):
+        t = self._valid_telemetry(status_flag=0)
+        assert t.status_bits_normal is True
+
+    def test_status_bits_normal_false_when_any_flag_set(self):
+        t = self._valid_telemetry(status_flag=1)
+        assert t.status_bits_normal is False
 
 
 # ---------------------------------------------------------------------------
@@ -403,3 +456,25 @@ class TestMeasurement:
         assert 'solar_azimuth_deg=90.0, solar_zenith_deg=45.0,' in rendered
         assert 'telemetry=Telemetry(' in rendered
         assert rendered.endswith('spectrum=[' + ', '.join(['1000'] * 190) + ']')
+
+    def test_measurement_exposes_status_flag_properties(self):
+        measurement = Measurement(
+            **_valid_measurement(
+                telemetry=Telemetry(
+                    voltage_volts=12.1,
+                    humidity_mm_hg=55.3,
+                    temperature_diode_celsius=23.456,
+                    status_flag=0b10111111,
+                )
+            )
+        )
+
+        assert measurement.servo_moved_during_integration is True
+        assert measurement.n2k_epoch_valid is False
+        assert measurement.n2k_heading_valid is False
+        assert measurement.n2k_gnss_valid is False
+        assert measurement.n2k_gnss_require_configuration is True
+        assert (
+            measurement.gear_calibration_status
+            == GearCalibrationStatus.MOVE_RIGHT_MAGNET_NOT_YET_DETECTED
+        )

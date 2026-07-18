@@ -5,6 +5,7 @@
 ### Changed
 
 - feat: use `writing.ext` as temporary filenames while writing
+- feat: Extend status flag decoding
 
 ## v0.1.0 (20260603)
 

@@ -54,6 +54,19 @@ class StatusFlag(enum.IntEnum):
     MOVING = 1
 
 
+class GearCalibrationStatus(enum.IntEnum):
+    """Gear calibration state encoded in status flag bits 7..5."""
+
+    CALIBRATION_OK = 0
+    MOVE_LEFT = 1
+    MOVE_RIGHT = 2
+    MOVE_CENTRE = 3
+    MANUAL_ENDSTOPS = 4
+    MOVE_RIGHT_MAGNET_NOT_YET_DETECTED = 5
+    RESERVED = 6
+    NOT_CALIBRATED = 7
+
+
 class Coordinates(BaseModel):
     """Position (lat/lon) in decimal degrees."""
 
@@ -105,7 +118,7 @@ class Telemetry(BaseModel):
     voltage_volts: float
     humidity_mm_hg: float
     temperature_diode_celsius: float
-    status_flag: int = Field(ge=0)  # multi-bit quality flag from instrument Qflag field
+    status_flag: int = Field(ge=0, le=255)  # 8-bit quality flag from instrument Qflag field
 
     @field_validator('voltage_volts')
     @classmethod
@@ -143,6 +156,41 @@ class Telemetry(BaseModel):
             f'Voltage:{self.voltage_volts:04.1f};Humidity:{self.humidity_mm_hg:04.1f};Temperature:'
             f'{self.temperature_diode_celsius:06.3f};Status flag:{self.status_flag}'
         )
+
+    @property
+    def servo_moved_during_integration(self) -> bool:
+        """Bit 0: DALEC moved during last integration."""
+        return bool(self.status_flag & (1 << 0))
+
+    @property
+    def n2k_epoch_valid(self) -> bool:
+        """Bit 1: True when GPS epoch age is within 1500 ms."""
+        return not bool(self.status_flag & (1 << 1))
+
+    @property
+    def n2k_heading_valid(self) -> bool:
+        """Bit 2: True when GPS heading age is within 1000 ms."""
+        return not bool(self.status_flag & (1 << 2))
+
+    @property
+    def n2k_gps_valid(self) -> bool:
+        """Bit 3: True when GPS lat/lon age is within 1000 ms."""
+        return not bool(self.status_flag & (1 << 3))
+
+    @property
+    def require_configuration(self) -> bool:
+        """Bit 4: Compass controller requires configuration."""
+        return bool(self.status_flag & (1 << 4))
+
+    @property
+    def gear_calibration_status(self) -> GearCalibrationStatus:
+        """Bits 7..5: gear calibration state."""
+        return GearCalibrationStatus((self.status_flag >> 5) & 0b111)
+
+    @property
+    def status_bits_normal(self) -> bool:
+        """True when all status bits are clear."""
+        return self.status_flag == 0
 
 
 class Measurement(BaseModel):
@@ -264,6 +312,36 @@ class Measurement(BaseModel):
         is available.
         """
         return not math.isnan(self.solar_zenith_deg)
+
+    @property
+    def servo_moved_during_integration(self) -> bool:
+        """Pass-through for telemetry status flag bit 0."""
+        return self.telemetry.servo_moved_during_integration
+
+    @property
+    def n2k_epoch_valid(self) -> bool:
+        """Pass-through for telemetry status flag bit 1 validity."""
+        return self.telemetry.n2k_epoch_valid
+
+    @property
+    def n2k_heading_valid(self) -> bool:
+        """Pass-through for telemetry status flag bit 2 validity."""
+        return self.telemetry.n2k_heading_valid
+
+    @property
+    def n2k_gnss_valid(self) -> bool:
+        """Pass-through for telemetry status flag bit 3 GNSS validity."""
+        return self.telemetry.n2k_gps_valid
+
+    @property
+    def n2k_gnss_require_configuration(self) -> bool:
+        """Pass-through for telemetry status flag bit 4."""
+        return self.telemetry.require_configuration
+
+    @property
+    def gear_calibration_status(self) -> GearCalibrationStatus:
+        """Pass-through for telemetry status flag bits 7..5."""
+        return self.telemetry.gear_calibration_status
 
     @classmethod
     def from_raw_data(cls, raw_data: str) -> Self:
