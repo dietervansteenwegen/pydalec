@@ -1,4 +1,4 @@
-Welcome to pydalec documentation!
+Welcome to the pydalec documentation!
 =================================================
 
 .. toctree::
@@ -6,10 +6,11 @@ Welcome to pydalec documentation!
    :caption: Contents:
 
    readme_link
-
-   usage
+   status_field
 
    modules
+
+   changelog_link
 
 
 

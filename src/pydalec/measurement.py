@@ -55,7 +55,18 @@ class StatusFlag(enum.IntEnum):
 
 
 class GearCalibrationStatus(enum.IntEnum):
-    """Gear calibration state encoded in status flag bits 7..5."""
+    """Gear calibration state encoded in status flag bits 7..5.
+
+    As per the manufacturer documentation:
+    000: Calibration OK, using magnetic endstops
+    001: 'MOVE_LEFT', Locating left magnetic endstop
+    010: 'MOVE_RIGHT', Locating right magnetic endstop
+    011: 'MOVE_CENTRE', Moving to centrepoint
+    100: Manual endstops
+    101: 'MOVE_RIGHT_MAGNET_NOT_YET_DETECTED', Moving right, left magnetic endstop detected. Likely between physical limit and left magnetic endstop
+    110: n/a
+    111: Gear NOT calibrated (default)
+    """
 
     CALIBRATION_OK = 0
     MOVE_LEFT = 1

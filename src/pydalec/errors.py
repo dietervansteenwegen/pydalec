@@ -1,3 +1,6 @@
+"""Exception classes raised by the DALEC client."""
+
+
 class PyDalecError(Exception):
     """Base class for all DALEC client exceptions."""
 

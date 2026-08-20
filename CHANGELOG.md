@@ -1,4 +1,4 @@
-# pydalec CHANGELOG
+# CHANGELOG
 
 ## Not released yet
 
@@ -7,6 +7,11 @@
 - feat: use `writing.ext` as temporary filenames while writing
 - feat: Extend status flag decoding
 
+### Added
+
+- docs: Many improvements in the documentation configuration/content
+
+<!-- start-docs -->
 ## v0.1.0 (20260603)
 
 ### Added

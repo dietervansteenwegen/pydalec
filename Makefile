@@ -33,8 +33,15 @@ cleanup_git:
 .PHONY: update_docs
 ## Update the documentation
 update_docs:
-	sphinx-apidoc.exe --force --output-dir ./docs/source ./src
-	sphinx-build -b html docs/source/ docs/build/
+	@echo ">> Generating API documentation using sphinx-apidoc"
+## `--module-first` ensures that the module-level docstring appears before the class and function docstrings in the generated documentation. 
+##    This provides an overview of the module's purpose and functionality before diving into the details of its classes and functions.
+##
+## `--automodule-options` specifies the options for the `automodule` directive in the generated documentation. 
+##    This overrides the default behaviour that includes `:undoc-members:` which we don't want to document.
+	@sphinx-apidoc --force --separate --module-first --automodule-options members,show-inheritance --output-dir ./docs/source ./src/pydalec
+	@echo ">> Generating HTML documentation using sphinx-build"
+	@sphinx-build --builder html --write-all --quiet docs/source/ docs/build/
 
 .PHONY: install
 ## Install for production

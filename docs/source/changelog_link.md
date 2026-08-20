@@ -1,7 +1,7 @@
 <!-- pyml disable-next-line MD041-->
 
-# Readme
+# Changelog
 
-```{include} ../../README.md
+```{include} ../../CHANGELOG.md
 :start-after: <!-- start-docs -->
 ```
