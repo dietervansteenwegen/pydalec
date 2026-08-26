@@ -6,9 +6,11 @@ Welcome to the pydalec documentation!
    :caption: Contents:
 
    readme_link
+   usage
+   measurement_telemetry
    status_field
 
-   modules
+   pydalec module <modules>
 
    changelog_link
 
