@@ -11,7 +11,8 @@
 
 - docs: Many improvements in the documentation configuration/content
 - docs: Document measurement acquisition lifecycle
-- docs: separate telemetry and measurement documentation
+- docs: Separate telemetry and measurement documentation
+- docs: Prepare for Read the docs automated builds
 
 <!-- start-docs -->
 ## v0.1.0 (20260603)

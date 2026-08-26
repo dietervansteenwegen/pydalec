@@ -63,17 +63,19 @@ dev = [
     "deptry>=0.22.0",
     "ruff>=0.9.6",
     "vulture>=2.14",
-    "sphinx>=8.2.1",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "tox",
+]
+
+docs = ["sphinx>=8.2.1", 
     "sphinx-rtd-theme>=3.0.2",
     "sphinxcontrib-napoleon>=0.7",
     "recommonmark>=0.7.1",
     "sphinx-copybutton>=0.5.2",
     "sphinx-toggleprompt>=0.6.0",
     "myst-parser>=4.0.1",
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "tox",
 ]
 # mock = ["pydalec-mock"]
 
