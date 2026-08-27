@@ -13,6 +13,7 @@
 - docs: Document measurement acquisition lifecycle
 - docs: Separate telemetry and measurement documentation
 - docs: Prepare for Read the docs automated builds
+- docs: Add additional information for measurement fields
 
 ## Fixed
 

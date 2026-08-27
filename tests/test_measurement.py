@@ -80,6 +80,14 @@ class TestCoordinates:
         with pytest.raises(ValidationError):
             Coordinates(lat=0.0, lon=180.1)
 
+    @pytest.mark.parametrize(
+        ('lat', 'lon'),
+        [(51.12345678, 4.3), (51.5, 4.12345678)],
+    )
+    def test_coordinates_reject_more_than_seven_decimals(self, lat: float, lon: float):
+        with pytest.raises(ValidationError, match='decimal places'):
+            Coordinates(lat=lat, lon=lon)
+
     def test_nan_coordinates_allowed(self):
         c = Coordinates(lat=float('nan'), lon=float('nan'))
 

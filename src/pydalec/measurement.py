@@ -83,8 +83,8 @@ class Coordinates(BaseModel):
 
     model_config = ConfigDict(extra='forbid')
 
-    lat: float
-    lon: float
+    lat: float = Field(description='Latitude in decimal degrees, accurate to at most 7 decimals.')
+    lon: float = Field(description='Longitude in decimal degrees, accurate to at most 7 decimals.')
 
     @field_validator('lat')
     @classmethod
@@ -97,7 +97,10 @@ class Coordinates(BaseModel):
         Returns:
             The validated latitude value.
         """
-        return _validate_range_or_nan(value, minimum=-90.0, maximum=90.0, field_name='lat')
+        value = _validate_range_or_nan(value, minimum=-90.0, maximum=90.0, field_name='lat')
+        if not _has_max_decimals(value, decimals=7):
+            raise ValueError('lat must have at most 7 decimal places')
+        return value
 
     @field_validator('lon')
     @classmethod
@@ -110,7 +113,10 @@ class Coordinates(BaseModel):
         Returns:
             The validated longitude value.
         """
-        return _validate_range_or_nan(value, minimum=-180.0, maximum=180.0, field_name='lon')
+        value = _validate_range_or_nan(value, minimum=-180.0, maximum=180.0, field_name='lon')
+        if not _has_max_decimals(value, decimals=7):
+            raise ValueError('lon must have at most 7 decimal places')
+        return value
 
     def __str__(self) -> str:
         """String representation in the format 'lat,lon' with N/S and E/W."""
@@ -253,25 +259,41 @@ class Measurement(BaseModel):
     serial_number: str = Field(pattern=r'^\d{4}$')  # four digits, e.g. '0010'
     channel_type: Literal['Ed', 'Lu', 'Lsky']
     utc_time: datetime.datetime
-    location: Coordinates
-    sat_compass_heading: float
-    solar_azimuth_deg: float
+    location: Coordinates = Field(description='Latitude and longitude in decimal degrees.')
+    sat_compass_heading: float = Field(
+        description='Satellite compass heading, relative to North, in degrees (0.0..359.9).'
+    )
+    solar_azimuth_deg: float = Field(
+        description='Calculated solar azimuth relative to North, in degrees (0.0..359.9).'
+    )
     solar_zenith_deg: float = Field(
         description=(
             'Solar zenith angle in degrees: 0 is directly overhead, 90 is the horizon, '
             'and values above 90 are below the horizon (range 0..180).'
         )
     )
-    gear_position_deg: float
-    azimuth_deg: float
-    relative_azimuth_deg: float
-    pitch_start_measurement_deg: float
-    roll_start_measurement_deg: float
+    gear_position_deg: float = Field(
+        description='DALEC geared-collar position in degrees (-179.9..180.0); positive is clockwise.'
+    )
+    azimuth_deg: float = Field(
+        description='DALEC azimuth, calculated as compass heading plus gear position, in degrees.'
+    )
+    relative_azimuth_deg: float = Field(
+        description='DALEC azimuth relative to solar azimuth, in degrees (-179.9..180.0).'
+    )
+    pitch_start_measurement_deg: float = Field(
+        description='Pitch angle at the start of integration, in degrees (-90.0..90.0).'
+    )
+    roll_start_measurement_deg: float = Field(
+        description='Roll angle at the start of integration, in degrees (-179.9..180.0).'
+    )
     telemetry: Telemetry
     int_time: int = Field(ge=1, le=6000)
     signal_percentage: float
-    dark_counts: int = Field(ge=0, le=65535)
-    max_counts: int = Field(ge=0, le=65535)
+    dark_counts: int = Field(
+        ge=0, le=65535, description='Average blackened NIR pixel counts (0..65535).'
+    )
+    max_counts: int = Field(ge=0, le=65535, description='Maximum spectrum count (0..65535).')
     spectrum: list[int] = Field(
         min_length=190,
         max_length=190,
