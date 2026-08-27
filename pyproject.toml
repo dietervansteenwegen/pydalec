@@ -47,7 +47,7 @@ dynamic = ["version"]
 Homepage = 'https://boxfish.be'
 Repository = 'https://github.com/dietervansteenwegen/pydalec.git'
 Changelog = 'https://github.com/dietervansteenwegen/pydalec/blob/master/CHANGELOG.md'
-# Documentation = 'https://readthedocs.org'
+Documentation = 'https://pydalec.readthedocs.io/en/latest/'
 
 [project.scripts]
 pydalec-test = 'pydalec.cli:main'
