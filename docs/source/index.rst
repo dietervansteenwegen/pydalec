@@ -10,7 +10,7 @@ Welcome to the pydalec documentation!
    measurement_telemetry
    status_field
 
-   pydalec module <modules>
+   pydalec API <modules>
 
    changelog_link
 
