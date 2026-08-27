@@ -256,7 +256,12 @@ class Measurement(BaseModel):
     location: Coordinates
     sat_compass_heading: float
     solar_azimuth_deg: float
-    solar_zenith_deg: float
+    solar_zenith_deg: float = Field(
+        description=(
+            'Solar zenith angle in degrees: 0 is directly overhead, 90 is the horizon, '
+            'and values above 90 are below the horizon (range 0..180).'
+        )
+    )
     gear_position_deg: float
     azimuth_deg: float
     relative_azimuth_deg: float
@@ -308,7 +313,6 @@ class Measurement(BaseModel):
     @field_validator(
         'sat_compass_heading',
         'solar_azimuth_deg',
-        'solar_zenith_deg',
         'azimuth_deg',
     )
     @classmethod
@@ -323,6 +327,18 @@ class Measurement(BaseModel):
             The validated bearing value.
         """
         return _validate_range_or_nan(value, minimum=0.0, maximum=359.9, field_name=info.field_name)
+
+    @field_validator('solar_zenith_deg')
+    @classmethod
+    def _validate_solar_zenith(cls, value: float) -> float:
+        """Validate solar zenith angle range.
+
+        Solar zenith is 0 degrees at zenith, 90 degrees at the horizon, and
+        180 degrees directly below the observer.
+        """
+        return _validate_range_or_nan(
+            value, minimum=0.0, maximum=180.0, field_name='solar_zenith_deg'
+        )
 
     @field_validator('gear_position_deg', 'relative_azimuth_deg', 'roll_start_measurement_deg')
     @classmethod

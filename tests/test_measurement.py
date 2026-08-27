@@ -361,6 +361,17 @@ class TestMeasurement:
         with pytest.raises(ValidationError):
             Measurement(**_valid_measurement(sat_compass_heading=360.0))
 
+    @pytest.mark.parametrize('solar_zenith_deg', [0.0, 90.0, 180.0])
+    def test_solar_zenith_valid_range(self, solar_zenith_deg: float):
+        measurement = Measurement(**_valid_measurement(solar_zenith_deg=solar_zenith_deg))
+
+        assert measurement.solar_zenith_deg == solar_zenith_deg
+
+    @pytest.mark.parametrize('solar_zenith_deg', [-0.1, 180.1, 359.9])
+    def test_solar_zenith_out_of_range(self, solar_zenith_deg: float):
+        with pytest.raises(ValidationError, match='solar_zenith_deg'):
+            Measurement(**_valid_measurement(solar_zenith_deg=solar_zenith_deg))
+
     def test_int_time_below_minimum(self):
         with pytest.raises(ValidationError):
             Measurement(**_valid_measurement(int_time=0))

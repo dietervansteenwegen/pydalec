@@ -21,7 +21,9 @@ optical readings, geometry, position, and telemetry.
 
 * `sat_compass_heading`: Heading from satellite compass in degrees (0.0 to 359.9).
 * `solar_azimuth_deg`: Calculated solar azimuth angle in degrees (0.0 to 359.9).
-* `solar_zenith_deg`: Calculated solar zenith angle in degrees (0.0 to 359.9).
+* `solar_zenith_deg`: Calculated solar zenith angle in degrees (0.0 to 180.0). A value of
+ 0 degrees means the sun is directly overhead (zenith), 90 degrees means it is on the
+ horizon, and values above 90 degrees mean it is below the horizon.
 * `gear_position_deg`: Gear position angle in degrees (-179.9 to 180.0).
 * `azimuth_deg`: Instrument azimuth angle in degrees (0.0 to 359.9).
 * `relative_azimuth_deg`: Relative azimuth angle in degrees (-179.9 to 180.0).

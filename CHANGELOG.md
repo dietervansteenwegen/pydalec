@@ -14,6 +14,10 @@
 - docs: Separate telemetry and measurement documentation
 - docs: Prepare for Read the docs automated builds
 
+## Fixed
+
+- fix: Sun zenith cannot be >180 degrees
+
 <!-- start-docs -->
 ## v0.1.0 (20260603)
 
