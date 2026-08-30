@@ -54,11 +54,22 @@ dalec.stop_measurements()
 There is no blocking `read()` call or callback API. Poll `measurement_log` periodically and
 track which records the application has already processed.
 
+## Instrument Readiness
+
+After power-up, the GNSS can take up to 90 seconds to establish a valid fix.
+During this period, position and compass-derived fields may return `NaN`. Use
+`get_location()` when a valid position is required; it waits for a valid fix or raises
+`PyDalecNoPositionDataError` if the timeout expires.
+
+Gear calibration must also be completed before the instrument can provide a reliable DALEC
+azimuth based on relative solar azimuth tracking. When gear position or DALEC azimuth is
+unavailable, the instrument reports `NaN`. Use `Measurement.has_valid_solar_zenith` and
+the existing measurement validity properties before consuming any retrieved geometry.
+
 ## In-Memory Buffering
 
 The default in-memory buffer is a `collections.deque` with a maximum length of 40. When it
-is full, a new measurement removes the oldest record. It is intended for recent readings,
-not archival storage.
+is full, new measurements replace the oldest records. It is intended as a received data buffer, not long-term storage. If that is needed, write to disc providing a `data_root_dir` when setting up the connection. See below.
 
 Resize it through the transport:
 
@@ -66,27 +77,13 @@ Resize it through the transport:
 dalec.transport.set_measurement_log_size(100)
 ```
 
-The size must be at least 1. Increasing the size preserves existing records; reducing it
-retains only the newest records that fit.
+The size must be > 1. Increasing the size preserves existing records; reducing
+retains only the most recent records.
 
-## Persist Raw TCP Data
+## Transports and Disk Persistence
 
-Pass `data_root_dir` to `connect_tcp()` to persist incoming TCP lines:
-
-```python
-dalec = Dalec.connect_tcp(
-    host='192.168.2.11',
-    data_root_dir='./data',
-    max_file_size_kb=51200,
-)
-```
-
-Valid raw lines are written beneath UTC-date folders. Error or non-measurement lines are
-written to a separate error stream. Files roll over when they exceed `max_file_size_kb` and
-are finalized when the stream closes or the client disconnects.
-
-The mock transport accepts these arguments for API compatibility but does not currently
-persist files or generate measurements.
+The TCP and mock transports, including TCP data persistence and the mock transport's current
+limitations, are described in [Transports](transports.md).
 
 ## Convenience Queries
 
@@ -99,12 +96,13 @@ location = dalec.get_location(timeout_secs=10.0)
 solar_zenith = dalec.get_solar_zenith(timeout_secs=10.0)
 ```
 
-Both methods raise a specific `pydalec` error if no valid value arrives before the timeout.
-The timeout must be greater than 0 seconds.
+`get_location()` raises `PyDalecNoPositionDataError` if no valid position arrives before the
+timeout. `get_solar_zenith()` raises `PyDalecNoSolarZenithDataError` if no valid solar zenith
+arrives before the timeout.
 
-## Disconnect
+## Disconnecting
 
-Stop acquisition before disconnecting:
+Stop acquisition before closing the connection:
 
 ```python
 dalec.stop_measurements()

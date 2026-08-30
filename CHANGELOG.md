@@ -6,6 +6,9 @@
 
 - feat: use `writing.ext` as temporary filenames while writing
 - feat: Extend status flag decoding
+- docs: Add dedicated TCP and mock transport documentation
+- docs: Clarify persisted `.raw` and `.error` file locations and naming
+- docs: Document instrument readiness, calibration, and mock transport limitations
 
 ### Added
 
@@ -18,6 +21,8 @@
 ## Fixed
 
 - fix: Sun zenith cannot be >180 degrees
+- fix: Enforce maximum seven-decimal accuracy for latitude and longitude
+- docs: Correct pitch and count field descriptions
 
 <!-- start-docs -->
 ## v0.1.0 (20260603)

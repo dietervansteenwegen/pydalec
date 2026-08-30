@@ -7,6 +7,7 @@ Welcome to the pydalec documentation!
 
    readme_link
    usage
+   transports
    measurement_telemetry
    status_field
 
